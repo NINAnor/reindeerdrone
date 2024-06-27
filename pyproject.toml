@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "reindeerdrone"
+version = "0.1.0"
+description = ""
+authors = ["Benjamin Cretois <benjamin.cretois@nina.no>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.3.1"
+ultralytics = "^8.2.42"
+matplotlib = "^3.9.0"
+opencv-python = "^4.10.0.84"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
