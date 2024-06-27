@@ -1,0 +1,15 @@
+#######################
+### PATH MANAGEMENT ###
+#######################
+
+ANNOTATION_PATH: "./data/annotations/result.json"
+IMAGES_FOLDER_PATH: "./data/annotations/"
+TILE_FOLDER_PATH: "./tiles"
+
+###################
+# DATA PROCESSING #
+###################
+
+TILE_SIZE: 1024
+OVERLAP: 100
+PLOT_ANNOTATION: True
