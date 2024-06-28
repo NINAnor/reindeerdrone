@@ -1,56 +1,87 @@
+import os
 import json
 import yaml
-from detectron2.data import DatasetCatalog, MetadataCatalog
+import numpy as np
+from detectron2.data import DatasetCatalog, MetadataCatalog, build_detection_train_loader, build_detection_test_loader
 from detectron2.config import get_cfg
+from detectron2.engine import DefaultTrainer, HookBase, launch, default_argument_parser
+from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+from detectron2.utils.logger import setup_logger
 from detectron2 import model_zoo
-from detectron2.engine import DefaultTrainer
-
-import pytorch_lightning as pl
-
 
 from dataset import get_reindeer_dicts, split_dataset
 
 from yaml import FullLoader
 
-class TrainerModule(pl.LightningModule):
+class EarlyStoppingHook(HookBase):
+    def __init__(self, patience=3, metric='bbox/AP'):
+        self.patience = patience
+        self.metric = metric
+        self.best_metric = None
+        self.num_bad_epochs = 0
+
+    def after_step(self):
+        if self.trainer.iter + 1 == self.trainer.max_iter:
+            results = self.trainer.storage.latest()
+            current_metric = results[self.metric]
+            if self.best_metric is None or current_metric > self.best_metric:
+                self.best_metric = current_metric
+                self.num_bad_epochs = 0
+            else:
+                self.num_bad_epochs += 1
+            if self.num_bad_epochs >= self.patience:
+                print(f"Early stopping triggered at iteration {self.trainer.iter + 1}")
+                self.trainer.iter = self.trainer.max_iter  # Stop training
+
+class ReindeerTrainer(DefaultTrainer):
+    @classmethod
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
+        if output_folder is None:
+            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+        return COCOEvaluator(dataset_name, cfg, False, output_folder)
+
+    @classmethod
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg)
+
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        return build_detection_test_loader(cfg, dataset_name)
+
     def __init__(self, cfg):
-        super().__init__()
-        self.cfg = cfg
-        self.trainer = DefaultTrainer(cfg)
-        self.trainer.resume_or_load(resume=False)
+        super().__init__(cfg)
+        #self.register_hooks([EarlyStoppingHook(patience=3, metric='bbox/AP')])
 
-    def train_dataloader(self):
-        return self.trainer.data_loader
+def setup(args):
+    """
+    Create configs and perform basic setups.
+    """
+    cfg = get_cfg()
+    cfg = get_cfg()
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
+    cfg.DATASETS.TRAIN = ("reindeer_train",)
+    cfg.DATASETS.TEST = ("reindeer_val",)
+    cfg.DATALOADER.NUM_WORKERS = 2
+    cfg.SOLVER.IMS_PER_BATCH = 2
+    cfg.SOLVER.BASE_LR = 0.00025
+    cfg.SOLVER.MAX_ITER = 3000
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only one class (reindeer)
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
+    cfg.OUTPUT_DIR = "./output"
+    return cfg
 
-    def training_step(self, batch, batch_idx):
-        loss_dict = self.trainer.model(batch)
-        losses = sum(loss_dict.values())
-        self.log("train_loss", losses)
-        return losses
-
-    def configure_optimizers(self):
-        return self.trainer.optimizer
-
-
-if __name__ == "__main__":
+def main(args):
+    setup_logger()
+    cfg = setup(args)
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
     with open("./config.yaml") as f:
         cfgP = yaml.load(f, Loader=FullLoader)
-
-    # Load configuration from file
-    cfg = get_cfg()
-    cfg.merge_from_file("detectron2.yaml")
 
     # Split the dataset
     img_dir = cfgP["TILE_FOLDER_PATH"]
     annotations_file = cfgP["TILE_ANNOTATION_PATH"]
     train_files, val_files, train_annotations, val_annotations = split_dataset(img_dir, annotations_file)
-
-    # Save split annotations for reproducibility (optional)
-    with open("train_annotations.json", "w") as f:
-        json.dump(train_annotations, f, indent=4)
-    with open("val_annotations.json", "w") as f:
-        json.dump(val_annotations, f, indent=4)
 
     # Register the dataset
     DatasetCatalog.register("reindeer_train", lambda: get_reindeer_dicts(img_dir, train_annotations))
@@ -59,6 +90,33 @@ if __name__ == "__main__":
     DatasetCatalog.register("reindeer_val", lambda: get_reindeer_dicts(img_dir, val_annotations))
     MetadataCatalog.get("reindeer_val").set(thing_classes=["reindeer"])
 
-    #trainer_module = TrainerModule(cfg)
-    #trainer = pl.Trainer(max_epochs=10, gpus=1)
-    #trainer.fit(trainer_module)
+    # Initialize trainer
+    trainer = ReindeerTrainer(cfg)
+    trainer.resume_or_load(resume=False)
+    
+    # Start training
+    trainer.train()
+
+    # Evaluate the model
+    evaluator = COCOEvaluator("reindeer_val", cfg, False, output_dir="./output/")
+    val_loader = build_detection_test_loader(cfg, "reindeer_val")
+    inference_on_dataset(trainer.model, val_loader, evaluator)
+
+def invoke_main() -> None:
+    args = default_argument_parser().parse_args()
+    print("Command Line Args:", args)
+    launch(
+        main,
+        args.num_gpus,
+        num_machines=args.num_machines,
+        machine_rank=args.machine_rank,
+        dist_url=args.dist_url,
+        args=(args,),
+    )
+
+
+if __name__ == "__main__":
+    invoke_main()
+
+
+
