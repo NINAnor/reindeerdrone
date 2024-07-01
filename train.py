@@ -2,7 +2,12 @@ import os
 import json
 import yaml
 import numpy as np
-from detectron2.data import DatasetCatalog, MetadataCatalog, build_detection_train_loader, build_detection_test_loader
+from detectron2.data import (
+    DatasetCatalog,
+    MetadataCatalog,
+    build_detection_train_loader,
+    build_detection_test_loader,
+)
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultTrainer, HookBase, launch, default_argument_parser
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
@@ -13,8 +18,9 @@ from dataset import get_reindeer_dicts, split_dataset
 
 from yaml import FullLoader
 
+
 class EarlyStoppingHook(HookBase):
-    def __init__(self, patience=3, metric='bbox/AP'):
+    def __init__(self, patience=3, metric="bbox/AP"):
         self.patience = patience
         self.metric = metric
         self.best_metric = None
@@ -33,6 +39,7 @@ class EarlyStoppingHook(HookBase):
                 print(f"Early stopping triggered at iteration {self.trainer.iter + 1}")
                 self.trainer.iter = self.trainer.max_iter  # Stop training
 
+
 class ReindeerTrainer(DefaultTrainer):
     @classmethod
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
@@ -50,15 +57,20 @@ class ReindeerTrainer(DefaultTrainer):
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        #self.register_hooks([EarlyStoppingHook(patience=3, metric='bbox/AP')])
+        # self.register_hooks([EarlyStoppingHook(patience=3, metric='bbox/AP')])
+
 
 def setup(args):
     """
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
-    cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
+    cfg.merge_from_file(
+        model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
+    )
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
+        "COCO-Detection/faster_rcnn_R_50_FPN_3x"
+    )
     cfg.DATASETS.TRAIN = ("reindeer_train",)
     cfg.DATASETS.TEST = ("reindeer_val",)
     cfg.DATALOADER.NUM_WORKERS = 2
@@ -66,9 +78,9 @@ def setup(args):
     cfg.SOLVER.BASE_LR = 0.00025
     cfg.SOLVER.MAX_ITER = 3000
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only one class (reindeer)
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
     cfg.OUTPUT_DIR = "./output"
     return cfg
+
 
 def main(args):
     setup_logger()
@@ -81,19 +93,25 @@ def main(args):
     # Split the dataset
     img_dir = cfgP["TILE_FOLDER_PATH"]
     annotations_file = cfgP["TILE_ANNOTATION_PATH"]
-    train_files, val_files, train_annotations, val_annotations = split_dataset(img_dir, annotations_file)
+    train_files, val_files, train_annotations, val_annotations = split_dataset(
+        img_dir, annotations_file
+    )
 
     # Register the dataset
-    DatasetCatalog.register("reindeer_train", lambda: get_reindeer_dicts(img_dir, train_annotations))
+    DatasetCatalog.register(
+        "reindeer_train", lambda: get_reindeer_dicts(img_dir, train_annotations)
+    )
     MetadataCatalog.get("reindeer_train").set(thing_classes=["reindeer"])
 
-    DatasetCatalog.register("reindeer_val", lambda: get_reindeer_dicts(img_dir, val_annotations))
+    DatasetCatalog.register(
+        "reindeer_val", lambda: get_reindeer_dicts(img_dir, val_annotations)
+    )
     MetadataCatalog.get("reindeer_val").set(thing_classes=["reindeer"])
 
     # Initialize trainer
     trainer = ReindeerTrainer(cfg)
     trainer.resume_or_load(resume=False)
-    
+
     # Start training
     trainer.train()
 
@@ -101,6 +119,7 @@ def main(args):
     evaluator = COCOEvaluator("reindeer_val", cfg, False, output_dir="./output/")
     val_loader = build_detection_test_loader(cfg, "reindeer_val")
     inference_on_dataset(trainer.model, val_loader, evaluator)
+
 
 def invoke_main() -> None:
     args = default_argument_parser().parse_args()
@@ -116,7 +135,5 @@ def invoke_main() -> None:
 
 
 if __name__ == "__main__":
+
     invoke_main()
-
-
-

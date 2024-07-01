@@ -2,11 +2,15 @@ import os
 import cv2
 import torch
 import numpy as np
+import yaml
+from yaml import FullLoader
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog
+import sys
+
+from utils import tile_image
+
 
 def load_predictor(config_file, model_weights, threshold=0.5):
     cfg = get_cfg()
@@ -17,42 +21,8 @@ def load_predictor(config_file, model_weights, threshold=0.5):
     predictor = DefaultPredictor(cfg)
     return predictor
 
-def tile_image(image, tile_size=1024, overlap=100):
-    tiles = []
-    height, width, _ = image.shape
-    for i in range(0, width, tile_size - overlap):
-        for j in range(0, height, tile_size - overlap):
-            x1 = min(i + tile_size, width)
-            y1 = min(j + tile_size, height)
-            tile = image[j:y1, i:x1]
-            pad_width = tile_size - (x1 - i)
-            pad_height = tile_size - (y1 - j)
-            if pad_width > 0 or pad_height > 0:
-                tile = cv2.copyMakeBorder(
-                    tile,
-                    0,
-                    pad_height,
-                    0,
-                    pad_width,
-                    cv2.BORDER_CONSTANT,
-                    value=[0, 0, 0],
-                )
-            tiles.append((tile, i, j))
-    return tiles, width, height
 
-def combine_tiles(image, tiles, tile_size=1024, overlap=100):
-    height, width, _ = image.shape
-    full_image = np.zeros((height, width, 3), dtype=np.uint8)
-    for tile, x, y in tiles:
-        x1 = min(x + tile_size, width)
-        y1 = min(y + tile_size, height)
-        pad_width = tile_size - (x1 - x)
-        pad_height = tile_size - (y1 - y)
-        tile = tile[: tile_size - pad_height, : tile_size - pad_width]
-        full_image[y:y1, x:x1] = tile
-    return full_image
-
-def predict_and_visualize(predictor, image_path, output_path, tile_size=1024, overlap=100):
+def predict(image, predictor, tile_size, overlap):
     # Read the image
     image = cv2.imread(image_path)
     # Tile the image
@@ -66,6 +36,10 @@ def predict_and_visualize(predictor, image_path, output_path, tile_size=1024, ov
         for box, score in zip(boxes, scores):
             if score >= predictor.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST:
                 results.append((box, x, y))
+    return results
+
+
+def visualize_preds(image, results, output_path):
     # Visualize predictions on the original image
     for box, x_offset, y_offset in results:
         x1, y1, x2, y2 = box
@@ -78,18 +52,32 @@ def predict_and_visualize(predictor, image_path, output_path, tile_size=1024, ov
     cv2.imwrite(output_path, image)
     print(f"Output saved to {output_path}")
 
+
 def main(image_path, cfg):
+
     config_file = cfg["CONFIG_FILE"]
-    model_weights = cfg["MODEL_WEIGHTS"]  # Path to the trained model weights
+    model_weights = cfg["MODEL_WEIGHTS"]
     output_path = cfg["OUTPUT_FOLDER"]
+    tile_size = cfg["TILE_SIZE"]
+    overlap = cfg["OVERLAP"]
     output_path = os.path.join(output_path, os.path.basename(image_path))
+
+    image = cv2.imread(image_path)
 
     # Load the predictor
     predictor = load_predictor(config_file, model_weights)
 
     # Perform prediction and visualize the results
-    predict_and_visualize(predictor, image_path, output_path)
+    results = predict(image, predictor, tile_size, overlap)
+    visualize_preds(image, results, output_path)
 
 
 if __name__ == "__main__":
 
+    with open("./config.yaml") as f:
+        cfg = yaml.load(f, Loader=FullLoader)
+    os.makedirs(cfg["OUTPUT_FOLDER"], exist_ok=True)
+
+    image_path = sys.argv[1]
+
+    main(image_path, cfg)

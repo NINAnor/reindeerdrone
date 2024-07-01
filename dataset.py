@@ -15,7 +15,14 @@ def load_coco_annotations(json_path):
     return data
 
 
-def tile_image_and_adjust_annotations(image_path, annotations, output_dir, tile_size=1024, overlap=100, plot_annotations=False):
+def tile_image_and_adjust_annotations(
+    image_path,
+    annotations,
+    output_dir,
+    tile_size=1024,
+    overlap=100,
+    plot_annotations=False,
+):
     """
     Tile an image and adjust annotations for each tile, drawing the bounding boxes on the tiles and saving them.
 
@@ -75,14 +82,19 @@ def tile_image_and_adjust_annotations(image_path, annotations, output_dir, tile_
                 "id": f"{image_id}_{count}",
                 "file_name": tile_name,
                 "width": tile_size,
-                "height": tile_size
+                "height": tile_size,
             }
             new_images.append(new_image_entry)
 
             # Adjust annotations for the tile
             for anno in annotations:
                 bbox = anno["bbox"]
-                xmin, ymin, xmax, ymax = bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]
+                xmin, ymin, xmax, ymax = (
+                    bbox[0],
+                    bbox[1],
+                    bbox[0] + bbox[2],
+                    bbox[1] + bbox[3],
+                )
 
                 # Check if the bounding box intersects the tile
                 if xmax > x0 and xmin < x1 and ymax > y0 and ymin < y1:
@@ -108,7 +120,7 @@ def tile_image_and_adjust_annotations(image_path, annotations, output_dir, tile_
                             "image_id": new_image_entry["id"],
                             "category_id": anno["category_id"],
                             "area": new_bbox_width * new_bbox_height,
-                            "iscrowd": 0
+                            "iscrowd": 0,
                         }
                         annotation_id += 1
                         new_annotations.append(new_anno)
@@ -118,7 +130,10 @@ def tile_image_and_adjust_annotations(image_path, annotations, output_dir, tile_
                             cv2.rectangle(
                                 draw_tile,
                                 (int(clipped_xmin), int(clipped_ymin)),
-                                (int(clipped_xmin + new_bbox_width), int(clipped_ymin + new_bbox_height)),
+                                (
+                                    int(clipped_xmin + new_bbox_width),
+                                    int(clipped_ymin + new_bbox_height),
+                                ),
                                 (0, 255, 0),
                                 2,
                             )
@@ -128,7 +143,9 @@ def tile_image_and_adjust_annotations(image_path, annotations, output_dir, tile_
     return new_images, new_annotations
 
 
-def process_dataset(dataset_dir, annotation_file, output_dir, tile_size, overlap, plot_annotations):
+def process_dataset(
+    dataset_dir, annotation_file, output_dir, tile_size, overlap, plot_annotations
+):
     coco_data = load_coco_annotations(annotation_file)
     annotations = coco_data["annotations"]
     all_new_images = []
@@ -148,7 +165,7 @@ def process_dataset(dataset_dir, annotation_file, output_dir, tile_size, overlap
         "annotations": all_new_annotations,
         "categories": coco_data["categories"],
         "info": coco_data.get("info", {}),
-        "licenses": coco_data.get("licenses", [])
+        "licenses": coco_data.get("licenses", []),
     }
 
     with open(os.path.join(output_dir, "new_annotations.json"), "w") as f:
@@ -161,14 +178,14 @@ def get_reindeer_dicts(tile_dir, annotations):
         record = {}
         filename = os.path.join(tile_dir, f"{anno['image_id']}.png")
         height, width = cv2.imread(filename).shape[:2]
-        
+
         record["file_name"] = filename
         record["image_id"] = idx
         record["height"] = height
         record["width"] = width
-        
+
         objs = []
-        for bbox in anno['annotations']:
+        for bbox in anno["annotations"]:
             obj = {
                 "bbox": bbox["bbox"],
                 "bbox_mode": BoxMode.XYWH_ABS,
@@ -186,12 +203,14 @@ def split_dataset(img_dir, annotations_file, split_ratio=0.8):
         coco = json.load(f)
 
     # Create a mapping of image file names (without extension) to their annotations
-    image_annotations = {img['file_name'].split('/')[-1].split('.')[0]: img['id'] for img in coco['images']}
-    print(image_annotations)
+    image_annotations = {
+        img["file_name"].split("/")[-1].split(".")[0]: img["id"]
+        for img in coco["images"]
+    }
     annotations = {img_id: [] for img_id in image_annotations.values()}
 
-    for anno in coco['annotations']:
-        annotations[anno['image_id']].append(anno)
+    for anno in coco["annotations"]:
+        annotations[anno["image_id"]].append(anno)
 
     # Split images into train and val sets
     image_files = list(image_annotations.keys())
@@ -200,8 +219,20 @@ def split_dataset(img_dir, annotations_file, split_ratio=0.8):
     train_files = image_files[:split_index]
     val_files = image_files[split_index:]
 
-    train_annotations = [{'image_id': image_annotations[file], 'annotations': annotations[image_annotations[file]]} for file in train_files]
-    val_annotations = [{'image_id': image_annotations[file], 'annotations': annotations[image_annotations[file]]} for file in val_files]
+    train_annotations = [
+        {
+            "image_id": image_annotations[file],
+            "annotations": annotations[image_annotations[file]],
+        }
+        for file in train_files
+    ]
+    val_annotations = [
+        {
+            "image_id": image_annotations[file],
+            "annotations": annotations[image_annotations[file]],
+        }
+        for file in val_files
+    ]
 
     return train_files, val_files, train_annotations, val_annotations
 
