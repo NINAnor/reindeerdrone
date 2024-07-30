@@ -4,6 +4,8 @@
 
 ANNOTATION_PATH: "./data/annotations/result.json"
 IMAGES_FOLDER_PATH: "./data/annotations/"
+
+TILE_ANNOTATION_PATH: "./tiles/new_annotations.json"
 TILE_FOLDER_PATH: "./tiles"
 
 ###################
@@ -12,4 +14,13 @@ TILE_FOLDER_PATH: "./tiles"
 
 TILE_SIZE: 1024
 OVERLAP: 100
-PLOT_ANNOTATION: True
+PLOT_ANNOTATION: False
+
+###############
+# PREDICTIONS #
+###############
+
+CONFIG_FILE: "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"
+MODEL_WEIGHTS: "./output/model_final.pth"  # Path to the trained model weights
+OUTPUT_FOLDER: "./predict/"
+PLOT_PREDICTION: True
