@@ -34,7 +34,7 @@ source .venv/bin/activate
 
 ## Import from LabelStudio
 
-We are using [LabelStudio] to annotate the images. After annonating the images in LabelStudio you can **export** annotations and images as a `.zip` file and extract it in a folder `./data/annotations`.
+We are using [LabelStudio] to annotate the images. After annonating the images in LabelStudio you can **export** annotations and images as `COCO` format and you should get a `.zip` file. Extract the `.zip` in a folder `./data/annotations`.
 
 Then, follow the pipeline!
 
