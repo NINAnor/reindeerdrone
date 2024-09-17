@@ -1,19 +1,93 @@
 import json
-import yaml
 import cv2
-import hashlib
 import os
 import random
+import numpy as np
+import math
+import yaml
 
-from yaml import FullLoader
 from detectron2.structures import BoxMode
 
 
-def load_coco_annotations(json_path):
+def load_custom_annotations(json_path):
+    """Load annotations from the new JSON format, removing prefixes from file_upload."""
     with open(json_path, "r") as file:
         data = json.load(file)
-    return data
+    annotations = []
+    
+    for item in data:
+        if "annotations" in item:
+            image_annotations = []
+            for annotation in item["annotations"]:
+                for result in annotation["result"]:
+                    value = result["value"]
 
+                    # Check if 'original_width' and 'original_height' are present in result, not in value
+                    if "original_width" not in result or "original_height" not in result:
+                        # Skip this annotation if these fields are missing
+                        print(f"Skipping annotation due to missing dimensions: {result}")
+                        continue
+
+                    original_width = result["original_width"]
+                    original_height = result["original_height"]
+
+                    # Convert normalized bbox coordinates (x, y, width, height) to pixel values
+                    bbox_x = value["x"] * original_width / 100
+                    bbox_y = value["y"] * original_height / 100
+                    bbox_width = value["width"] * original_width / 100
+                    bbox_height = value["height"] * original_height / 100
+                    rotation = value.get("rotation", 0)
+
+                    # Get label (we assume first label in rectanglelabels list)
+                    category = value["rectanglelabels"][0]
+
+                    # Store the transformed annotation
+                    image_annotations.append({
+                        "bbox": [bbox_x, bbox_y, bbox_width, bbox_height],
+                        "category": category,
+                        "rotation": rotation,
+                        "original_width": original_width,
+                        "original_height": original_height
+                    })
+            
+            # Remove prefix from the file_upload field
+            filename = item["file_upload"].split('-')[-1]  # Split by '-' and take the last part
+            
+            annotations.append({
+                "image_id": item["id"],
+                "file_upload": filename,  # Store the cleaned file name without prefix
+                "annotations": image_annotations
+            })
+    
+    return annotations
+
+def apply_rotation(bbox, rotation, center):
+    """Apply rotation to a bounding box around a center point and return its four corners."""
+    if rotation == 0:
+        # Return the axis-aligned bounding box corners
+        x, y, width, height = bbox
+        return np.array([[x, y], [x + width, y], [x + width, y + height], [x, y + height]])
+
+    # Convert bbox [x, y, width, height] to corners
+    x, y, width, height = bbox
+    corners = np.array([
+        [x, y],  # top-left
+        [x + width, y],  # top-right
+        [x + width, y + height],  # bottom-right
+        [x, y + height]  # bottom-left
+    ])
+
+    # Get rotation matrix for the given angle and center (relative to the tile)
+    rotation_matrix = cv2.getRotationMatrix2D(center, rotation, 1.0)
+
+    # Apply rotation to each corner
+    ones = np.ones(shape=(len(corners), 1))  # Add ones to convert the corners to homogeneous coordinates
+    corners_with_ones = np.hstack([corners, ones])
+    
+    # Apply rotation matrix
+    rotated_corners = rotation_matrix.dot(corners_with_ones.T).T
+
+    return rotated_corners
 
 def tile_image_and_adjust_annotations(
     image_path,
@@ -24,41 +98,25 @@ def tile_image_and_adjust_annotations(
     plot_annotations=False,
 ):
     """
-    Tile an image and adjust annotations for each tile, drawing the bounding boxes on the tiles and saving them.
-
-    Args:
-        image_path (str): Path to the image to be tiled.
-        annotations (list): List of annotations dicts, each with 'bbox' and 'image_id'.
-        output_dir (str): Directory where the tiled images will be saved.
-        tile_size (int): The size of each tile (default is 1024).
-        overlap (int): Overlap size between tiles (default is 100).
-        plot_annotations (bool): Whether to plot annotations on tiles.
-
-    Returns:
-        list: Updated annotations for each tile.
+    Tile an image and adjust annotations for each tile, accounting for rotation and rescaling the bounding boxes.
     """
-    # Read the image
     img = cv2.imread(image_path)
     height, width, _ = img.shape
     image_id = os.path.splitext(os.path.basename(image_path))[0]
 
-    # Prepare directory
     os.makedirs(output_dir, exist_ok=True)
 
-    # Prepare to collect new annotations and image entries
     new_annotations = []
     new_images = []
-    annotation_id = 1  # Unique annotation ID counter
-    count = 0  # Counter for tile IDs
+    annotation_id = 1  
+    count = 0  
 
     for i in range(0, width, tile_size - overlap):
         for j in range(0, height, tile_size - overlap):
-            # Define the coordinates of the tile
             x0, y0 = i, j
             x1, y1 = min(i + tile_size, width), min(j + tile_size, height)
             tile = img[y0:y1, x0:x1]
 
-            # Check if padding is needed
             pad_width = tile_size - (x1 - x0)
             pad_height = tile_size - (y1 - y0)
             if pad_width > 0 or pad_height > 0:
@@ -72,11 +130,9 @@ def tile_image_and_adjust_annotations(
                     value=[0, 0, 0],
                 )
 
-            draw_tile = tile.copy()  # Copy of the tile for drawing
-
             tile_name = f"{image_id}_{count}.png"
             tile_path = os.path.join(output_dir, tile_name)
-            cv2.imwrite(tile_path, draw_tile)
+            cv2.imwrite(tile_path, tile)
 
             new_image_entry = {
                 "id": f"{image_id}_{count}",
@@ -86,123 +142,141 @@ def tile_image_and_adjust_annotations(
             }
             new_images.append(new_image_entry)
 
-            # Adjust annotations for the tile
             for anno in annotations:
-                bbox = anno["bbox"]
-                xmin, ymin, xmax, ymax = (
-                    bbox[0],
-                    bbox[1],
-                    bbox[0] + bbox[2],
-                    bbox[1] + bbox[3],
-                )
+                for bbox in anno["annotations"]:
+                    xmin, ymin, box_width, box_height = bbox["bbox"]
+                    rotation = bbox.get("rotation", 0)
+                    
+                    # Compute the bounding box's max coordinates
+                    xmax = xmin + box_width
+                    ymax = ymin + box_height
 
-                # Check if the bounding box intersects the tile
-                if xmax > x0 and xmin < x1 and ymax > y0 and ymin < y1:
-                    # Clip the bounding box coordinates to fit within the tile
-                    clipped_xmin = max(xmin, x0) - x0
-                    clipped_ymin = max(ymin, y0) - y0
-                    clipped_xmax = min(xmax, x1) - x0
-                    clipped_ymax = min(ymax, y1) - y0
-                    new_bbox_width = max(0, clipped_xmax - clipped_xmin)
-                    new_bbox_height = max(0, clipped_ymax - clipped_ymin)
+                    # Check if the bounding box overlaps with the current tile
+                    if xmax > x0 and xmin < x1 and ymax > y0 and ymin < y1:
+                        # Shift the bounding box coordinates relative to the tile's origin
+                        shifted_xmin = max(xmin, x0) - x0
+                        shifted_ymin = max(ymin, y0) - y0
+                        shifted_xmax = min(xmax, x1) - x0
+                        shifted_ymax = min(ymax, y1) - y0
 
-                    # Ensure we have a valid rectangle
-                    if new_bbox_width > 0 and new_bbox_height > 0:
-                        new_bbox = [
-                            clipped_xmin,
-                            clipped_ymin,
-                            new_bbox_width,
-                            new_bbox_height,
-                        ]
-                        new_anno = {
-                            "id": annotation_id,
-                            "bbox": new_bbox,
-                            "image_id": new_image_entry["id"],
-                            "category_id": anno["category_id"],
-                            "area": new_bbox_width * new_bbox_height,
-                            "iscrowd": 0,
-                        }
-                        annotation_id += 1
-                        new_annotations.append(new_anno)
+                        # Recalculate the bounding box width and height within the tile
+                        new_bbox_width = max(0, shifted_xmax - shifted_xmin)
+                        new_bbox_height = max(0, shifted_ymax - shifted_ymin)
 
-                        # Draw rectangle on the tile
-                        if plot_annotations:
-                            cv2.rectangle(
-                                draw_tile,
-                                (int(clipped_xmin), int(clipped_ymin)),
-                                (
-                                    int(clipped_xmin + new_bbox_width),
-                                    int(clipped_ymin + new_bbox_height),
-                                ),
-                                (0, 255, 0),
-                                2,
-                            )
+                        if new_bbox_width > 0 and new_bbox_height > 0:
+                            new_bbox = [
+                                shifted_xmin,
+                                shifted_ymin,
+                                new_bbox_width,
+                                new_bbox_height,
+                            ]
+
+                            # Apply rotation to the new bounding box if necessary
+                            if rotation != 0:
+                                # Calculate the center after shifting to the tile's local coordinates
+                                center = (
+                                    shifted_xmin + new_bbox_width / 2,
+                                    shifted_ymin + new_bbox_height / 2
+                                )
+
+                                # Get the rotated corners
+                                rotated_bbox = apply_rotation(new_bbox, rotation, center)
+
+                                if plot_annotations:
+                                    # Draw the rotated bounding box as a polygon
+                                    cv2.polylines(
+                                        tile,
+                                        [np.int32(rotated_bbox)],
+                                        isClosed=True,
+                                        color=(0, 255, 0),
+                                        thickness=2,
+                                    )
+
+                            else:
+                                if plot_annotations:
+                                    # Draw the axis-aligned bounding box
+                                    cv2.rectangle(
+                                        tile,
+                                        (int(new_bbox[0]), int(new_bbox[1])),
+                                        (
+                                            int(new_bbox[0] + new_bbox[2]),
+                                            int(new_bbox[1] + new_bbox[3]),
+                                        ),
+                                        (0, 255, 0),
+                                        2,
+                                    )
+
+                            new_anno = {
+                                "id": annotation_id,
+                                "bbox": new_bbox,
+                                "image_id": new_image_entry["id"],
+                                "category_id": bbox["category"],
+                                "area": new_bbox_width * new_bbox_height,
+                                "iscrowd": 0,
+                            }
+                            annotation_id += 1
+                            new_annotations.append(new_anno)
 
             count += 1
 
     return new_images, new_annotations
 
 
+def clip_rotated_bbox_to_tile(rotated_bbox, tile_x, tile_y, tile_size):
+    """
+    Clips a rotated bounding box to the boundaries of the tile.
+    """
+    # Create a polygon for the tile's boundaries
+    tile_polygon = np.array([
+        [tile_x, tile_y],
+        [tile_x + tile_size, tile_y],
+        [tile_x + tile_size, tile_y + tile_size],
+        [tile_x, tile_y + tile_size]
+    ])
+
+    # Create a polygon for the rotated bounding box
+    rotated_bbox_polygon = np.array(rotated_bbox)
+
+    # Clip rotated bbox
+    clipped_bbox = np.clip(rotated_bbox_polygon, [tile_x, tile_y], [tile_x + tile_size, tile_y + tile_size])
+
+    return clipped_bbox
+
+
+
+
+
+
 def process_dataset(
     dataset_dir, annotation_file, output_dir, tile_size, overlap, plot_annotations
 ):
-    coco_data = load_coco_annotations(annotation_file)
-    annotations = coco_data["annotations"]
+    """Process the dataset using custom annotations and tile the images."""
+    annotations = load_custom_annotations(annotation_file)
     all_new_images = []
     all_new_annotations = []
 
-    for image_info in coco_data["images"]:
-        image_path = os.path.join(dataset_dir, image_info["file_name"])
+    for anno in annotations:
+        image_path = os.path.join(dataset_dir, anno["file_upload"])
         new_images, new_annotations = tile_image_and_adjust_annotations(
-            image_path, annotations, output_dir, tile_size, overlap, plot_annotations
+            image_path, [anno], output_dir, tile_size, overlap, plot_annotations
         )
         all_new_images.extend(new_images)
         all_new_annotations.extend(new_annotations)
 
-    # Create the new COCO-compliant dataset
-    new_coco_data = {
+    # Create the new dataset
+    new_data = {
         "images": all_new_images,
         "annotations": all_new_annotations,
-        "categories": coco_data["categories"],
-        "info": coco_data.get("info", {}),
-        "licenses": coco_data.get("licenses", []),
     }
 
     with open(os.path.join(output_dir, "new_annotations.json"), "w") as f:
-        json.dump(new_coco_data, f, indent=4)
-
-
-def get_reindeer_dicts(tile_dir, annotations):
-    dataset_dicts = []
-    for idx, anno in enumerate(annotations):
-        record = {}
-        filename = os.path.join(tile_dir, f"{anno['image_id']}.png")
-        height, width = cv2.imread(filename).shape[:2]
-
-        record["file_name"] = filename
-        record["image_id"] = idx
-        record["height"] = height
-        record["width"] = width
-
-        objs = []
-        for bbox in anno["annotations"]:
-            obj = {
-                "bbox": bbox["bbox"],
-                "bbox_mode": BoxMode.XYWH_ABS,
-                "category_id": bbox["category_id"],
-            }
-            objs.append(obj)
-        record["annotations"] = objs
-        dataset_dicts.append(record)
-    return dataset_dicts
-
+        json.dump(new_data, f, indent=4)
 
 def split_dataset(img_dir, annotations_file, split_ratio=0.8):
-    # Load annotations
+    """Split the dataset into training and validation sets."""
     with open(annotations_file) as f:
         coco = json.load(f)
 
-    # Create a mapping of image file names (without extension) to their annotations
     image_annotations = {
         img["file_name"].split("/")[-1].split(".")[0]: img["id"]
         for img in coco["images"]
@@ -212,7 +286,6 @@ def split_dataset(img_dir, annotations_file, split_ratio=0.8):
     for anno in coco["annotations"]:
         annotations[anno["image_id"]].append(anno)
 
-    # Split images into train and val sets
     image_files = list(image_annotations.keys())
     random.shuffle(image_files)
     split_index = int(len(image_files) * split_ratio)
@@ -238,9 +311,9 @@ def split_dataset(img_dir, annotations_file, split_ratio=0.8):
 
 
 if __name__ == "__main__":
-
+    # Load config file
     with open("./config.yaml") as f:
-        cfg = yaml.load(f, Loader=FullLoader)
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     process_dataset(
         cfg["IMAGES_FOLDER_PATH"],
