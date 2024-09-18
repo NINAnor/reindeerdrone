@@ -43,6 +43,7 @@ def adjust_annotations_for_tiles(annotations, x0, y0, tile_name, tile_size):
     annotation_id = 1  # Unique annotation ID counter
 
     for anno in annotations:
+        print(anno)
         bbox = anno["bbox"]
         xmin, ymin, xmax, ymax = bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]
 
@@ -77,6 +78,16 @@ def adjust_annotations_for_tiles(annotations, x0, y0, tile_name, tile_size):
 
     return new_annotations
 
+# Function to generate unique colors for each category
+def get_category_color(category_id):
+    color_map = {
+        0: (0, 255, 0),  # Green for category 0
+        1: (0, 0, 255),  # Red for category 1
+        2: (255, 0, 0),  # Blue for category 2
+        # Add more categories and colors as needed
+    }
+    return color_map.get(category_id, (255, 255, 255))  # Default to white if category_id not in map
+
 # Tile the image and adjust annotations
 def tile_image_and_adjust_annotations(image_path, image_info, annotations, output_dir, tile_size, overlap, plot_annotations=False):
 
@@ -110,12 +121,17 @@ def tile_image_and_adjust_annotations(image_path, image_info, annotations, outpu
         if plot_annotations:
             for anno in new_annotations:
                 bbox = anno["bbox"]
-                print(bbox)
+                category_id = anno["category_id"]
+
+                # Get color based on category
+                color = get_category_color(category_id)
+
+                # Draw rectangle with the color corresponding to the category
                 cv2.rectangle(
                     tile,
                     (int(bbox[0]), int(bbox[1])),
                     (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3])),
-                    (0, 255, 0),
+                    color,
                     2,
                 )
 
