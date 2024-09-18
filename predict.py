@@ -13,20 +13,20 @@ import sys
 from utils import tile_image
 
 
-def load_predictor(config_file, model_weights, threshold=0.5):
+# Load predictor
+def load_predictor(config_file, model_weights, num_classes=2, threshold=0.5):
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file(config_file))
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = threshold  # set threshold for this model
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = threshold  # Set threshold for the model
     cfg.MODEL.WEIGHTS = model_weights
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only one class (reindeer)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = num_classes  # Update to match the number of classes
     predictor = DefaultPredictor(cfg)
     return predictor
 
 
+# Predict bounding boxes and confidence scores
 def predict(image, predictor, tile_size, overlap):
     # Read the image
-    image = cv2.imread(image_path)
-    # Tile the image
     tiles, width, height = tile_image(image, tile_size, overlap)
     results = []
     for tile, x, y in tiles:
@@ -34,28 +34,32 @@ def predict(image, predictor, tile_size, overlap):
         instances = outputs["instances"].to("cpu")
         boxes = instances.pred_boxes.tensor.numpy()
         scores = instances.scores.numpy()
-        for box, score in zip(boxes, scores):
+        classes = instances.pred_classes.numpy()  # Get predicted class labels
+        for box, score, cls in zip(boxes, scores, classes):
             if score >= predictor.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST:
-                results.append((box, score, x, y))
+                results.append((box, score, cls, x, y))
     return results
 
 
-def visualize_preds(image, results, output_path):
-    # Visualize predictions on the original image
-    for box, score, x_offset, y_offset in results:
+# Visualize predictions with different colors for different classes
+def visualize_preds(image, results, output_path, class_names=["Adult", "Calf"]):
+    colors = [(0, 255, 0), (255, 0, 0)]  # Colors for classes "Adult" and "Calf"
+    for box, score, cls, x_offset, y_offset in results:
         x1, y1, x2, y2 = box
         x1 += x_offset
         y1 += y_offset
         x2 += x_offset
         y2 += y_offset
-        cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+        color = colors[cls] if cls < len(colors) else (0, 0, 255)  # Default color if out of range
+        label = class_names[cls] if cls < len(class_names) else "Unknown"
+        cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
         cv2.putText(
             image,
-            f"{score:.2f}",
+            f"{label} {score:.2f}",
             (int(x1), int(y1) - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
-            (0, 255, 0),
+            color,
             2,
         )
     # Save the output image
@@ -63,9 +67,10 @@ def visualize_preds(image, results, output_path):
     print(f"Output saved to {output_path}")
 
 
+# Save predictions to JSON
 def save_predictions_to_json(results, output_json_path):
     detections = []
-    for box, score, x_offset, y_offset in results:
+    for box, score, cls, x_offset, y_offset in results:
         x1, y1, x2, y2 = box
         x1 += x_offset
         y1 += y_offset
@@ -75,6 +80,7 @@ def save_predictions_to_json(results, output_json_path):
             {
                 "bbox": [float(x1), float(y1), float(x2), float(y2)],
                 "score": float(score),
+                "category_id": int(cls),
             }
         )
     with open(output_json_path, "w") as f:
@@ -83,6 +89,7 @@ def save_predictions_to_json(results, output_json_path):
     print(f"{len(detections)} detections have been made")
 
 
+# Main function
 def main(image_path, cfg):
 
     # Folder management
@@ -102,7 +109,7 @@ def main(image_path, cfg):
     image = cv2.imread(image_path)
 
     # Load the predictor
-    predictor = load_predictor(cfg["CONFIG_FILE"], cfg["MODEL_WEIGHTS"])
+    predictor = load_predictor(cfg["CONFIG_FILE"], cfg["MODEL_WEIGHTS"], num_classes=2)
 
     # Perform prediction and visualize the results
     results = predict(image, predictor, cfg["TILE_SIZE"], cfg["OVERLAP"])
