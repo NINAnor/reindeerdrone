@@ -1,7 +1,6 @@
 import os
 import json
 import yaml
-import numpy as np
 import cv2
 import random
 from detectron2.data import (
@@ -9,6 +8,8 @@ from detectron2.data import (
     MetadataCatalog,
     build_detection_train_loader,
     build_detection_test_loader,
+    DatasetMapper,
+    transforms as T,
 )
 from detectron2.structures import BoxMode
 from detectron2.config import get_cfg
@@ -18,6 +19,20 @@ from detectron2.utils.logger import setup_logger
 from detectron2 import model_zoo
 
 from yaml import FullLoader
+
+def build_augmentation(cfg, is_train=True):
+    if is_train:
+        augmentation = [
+            T.Resize((800, 800)),  # Resize images to a fixed size
+            T.RandomFlip(prob=0.5, horizontal=True, vertical=False),  # Horizontal flip
+            T.RandomRotation(angle=[-10, 10], expand=False),  # Rotate between -10 and 10 degrees
+            T.RandomCrop("relative", (0.8, 0.8))  # Crop randomly to 80% of the image
+        ]
+    else:
+        augmentation = [
+            T.Resize((800, 800))
+        ]
+    return augmentation
 
 def normalize_image_id(image_id):
     # Normalizes image_id by stripping any directory structure
@@ -104,7 +119,8 @@ class ReindeerTrainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg)
+        return build_detection_train_loader(cfg,
+            mapper=DatasetMapper(cfg, is_train=True, augmentations=build_augmentation(cfg, is_train=True)))
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
