@@ -4,6 +4,7 @@ import cv2
 import os
 from yaml import FullLoader
 from detectron2.structures import BoxMode
+from tqdm import tqdm
 
 # Load COCO annotations
 def load_coco_annotations(json_path):
@@ -43,7 +44,6 @@ def adjust_annotations_for_tiles(annotations, x0, y0, tile_name, tile_size):
     annotation_id = 1  # Unique annotation ID counter
 
     for anno in annotations:
-        print(anno)
         bbox = anno["bbox"]
         xmin, ymin, xmax, ymax = bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]
 
@@ -147,7 +147,7 @@ def process_dataset(dataset_dir, annotation_file, output_dir, tile_size, overlap
     all_new_images = []
     all_new_annotations = []
 
-    for image_info in coco_data["images"]:
+    for image_info in tqdm(coco_data["images"], desc="Processing images"):
         image_path = os.path.join(dataset_dir, image_info["file_name"])
 
         # Get new images and annotations while preserving original file names
@@ -156,7 +156,6 @@ def process_dataset(dataset_dir, annotation_file, output_dir, tile_size, overlap
         )
         all_new_images.extend(new_images)
         all_new_annotations.extend(new_annotations)
-
     # Create the new COCO-compliant dataset
     new_coco_data = {
         "images": all_new_images,
