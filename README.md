@@ -41,7 +41,7 @@ Then, follow the pipeline!
 ## Create the training dataset dataset
 
 ```bash
-python3 dataset.py
+python3 src/dataset.py
 ```
 Because the satellite images are too big to be processed efficiently by `detectron2` we split the images into `tiles`. **Tile size** can be changed in the `config.yaml` file and can slighlty change the results (we recommand to do a `hyperparameter search` to search for the optimal tile size).
 
@@ -50,7 +50,7 @@ The script will create a `tiles` folder containing the tiles of the processed sa
 ## Train detectron2
 
 ```bash
-python3 train.py
+python3 src/train.py
 ```
 
 With this script we train a `Detectron2` model with a [faster-rcnn architecture](https://github.com/facebookresearch/detectron2/blob/main/configs/COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml) as backbone. Note that it is possible to change the backbone by choosing another [Detectron compliant](https://github.com/facebookresearch/detectron2/tree/main/configs/COCO-Detection) model.
@@ -60,7 +60,7 @@ The script should create a folder `output` that contains `model_final.pth`, the 
 ## Predict
 
 ```bash
-python3 predict.py
+python3 src/predict.py
 ```
 
 The script will load the model that has been trained in the previous step to make the predictions. The script will create a folder `./predict/image` containing the predicted bounding boxes and `./predict/json` containing the a `.json` file per image documenting all the bounding box coordinates.
