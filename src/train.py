@@ -16,7 +16,7 @@ from detectron2.engine import DefaultTrainer, launch, default_argument_parser
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 
-from data import split_dataset, get_reindeer_dicts, build_augmentation
+from dataset_utils import split_dataset, get_reindeer_dicts, build_augmentation
 from hooks import LossEvalHook, EarlyStoppingHook
 
 
