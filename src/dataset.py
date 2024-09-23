@@ -3,7 +3,6 @@ import yaml
 import cv2
 import os
 from yaml import FullLoader
-from detectron2.structures import BoxMode
 from tqdm import tqdm
 
 # Load COCO annotations

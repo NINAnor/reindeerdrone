@@ -86,7 +86,11 @@ def main(args):
     cfg = setup(args)
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
-    with open("./../config.yaml") as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(current_dir, './../config.yaml')
+
+    # Load the config file
+    with open(config_path) as f:
         cfgP = yaml.load(f, Loader=FullLoader)
 
     # Split the dataset
