@@ -6,7 +6,7 @@ ANNOTATION_PATH: "/home/taheera.ahmed/data/reindeerdrone/result.json"
 IMAGES_FOLDER_PATH: "/home/taheera.ahmed/data/reindeerdrone/"
 
 TILE_ANNOTATION_PATH: "/home/taheera.ahmed/data/reindeerdrone/tiles/new_annotations.json"
-TILE_FOLDER_PATH: "/home/taheera.ahmed/data/reindeerdrone/tiles"
+TILE_FOLDER_PATH: "/home/taheera.ahmed/data/reindeerdrone/tiles/images"
 
 ###################
 # DATA PROCESSING #

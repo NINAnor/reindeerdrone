@@ -5,3 +5,4 @@ detectron2/*
 output/
 tiles/
 .vscode/
+notebooks/detr_finetuned_reindeerdrone
