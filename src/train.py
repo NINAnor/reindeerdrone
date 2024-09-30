@@ -37,7 +37,7 @@ class ReindeerTrainer(DefaultTrainer):
         return build_detection_test_loader(cfg, dataset_name)
 
     def build_hooks(self):
-        hooks = super().build_hooks()  # Correct super() call
+        hooks = super().build_hooks()
         hooks.insert(-1, EarlyStoppingHook(patience=1000, threshold=0.001))
         hooks.insert(-1, LossEvalHook(
             eval_period = self.cfg.TEST.EVAL_PERIOD,
@@ -68,12 +68,11 @@ def setup(args):
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = 0.00025
-    cfg.SOLVER.MAX_ITER = 3000 # TODO: Change this to 3000
+    cfg.SOLVER.MAX_ITER = 3000
     cfg.TEST.EVAL_PERIOD = 100
     cfg.CUDNN_BENCHMARK = True
 
-    # Assuming you have two classes: "Adult" and "Calf"
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # Set to 2 classes if you have both "Adult" and "Calf"
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
     cfg.OUTPUT_DIR = "./../output"
 
     logger = setup_logger(output=cfg.OUTPUT_DIR)
@@ -123,7 +122,6 @@ def main(args):
     evaluator = COCOEvaluator("reindeer_val", cfg, False, output_dir="./output/")
     val_loader = build_detection_test_loader(cfg, "reindeer_val")
     inference_on_dataset(trainer.model, val_loader, evaluator)
-
 
 
 def invoke_main() -> None:
