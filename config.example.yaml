@@ -1,0 +1,32 @@
+#######################
+### PATH MANAGEMENT ###
+#######################
+
+ANNOTATION_PATH: # The path for the non-tiled data: "/home/taheera.ahmed/data/reindeerdrone/whole/test/result.json"
+IMAGES_FOLDER_PATH: # The image directory for the non-tiled data: "/home/taheera.ahmed/data/reindeerdrone/whole/test"
+
+TILE_ANNOTATION_PATH: # File with annotations for the tiled data: "/home/taheera.ahmed/data/reindeerdrone/tiles/train/new_annotations.json"
+TILE_FOLDER_PATH: # Directory for the tiled images: "/home/taheera.ahmed/data/reindeerdrone/tiles/train/images"
+
+TILE_TEST_ANNOTATION_PATH: # Test set file with annotations for the tiled data: "/home/taheera.ahmed/data/reindeerdrone/tiles/test/new_annotations.json"
+TILE_TEST_FOLDER_PATH: # Teset set image directory for tiled data: "/home/taheera.ahmed/data/reindeerdrone/tiles/test"
+
+OUTPUT_FOLDER: # Output folder for all files created with the python scripts: "/home/taheera.ahmed/code/reindeerdrone/output/02_hyperparam_opt"
+
+###################
+# DATA PROCESSING #
+###################
+
+TILE_SIZE: 1024
+OVERLAP: 100
+PLOT_ANNOTATION: False
+
+###############
+# PREDICTIONS #
+###############
+
+CONFIG_FILE: "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"
+MODEL_WEIGHTS: # Path to the trained model weights: "/home/taheera.ahmed/code/reindeerdrone/output/02_hyperparam_opt/model_final.pth"
+
+USE_FILTER: # Used to remove duplicate bboxes: True
+PLOT_PREDICTION: # To save prediction images with ground truth: True
