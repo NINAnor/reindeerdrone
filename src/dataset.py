@@ -169,7 +169,10 @@ def process_dataset(dataset_dir, annotation_file, output_dir, tile_size, overlap
 
 
 if __name__ == "__main__":
-    with open("./config.yaml") as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(current_dir, './../config.yaml')
+    
+    with open(config_path) as f:
         cfg = yaml.load(f, Loader=FullLoader)
 
     process_dataset(
