@@ -165,13 +165,13 @@ def process_folder(cfg):
     config_file = cfg["CONFIG_FILE"]
     model_weights = cfg["MODEL_WEIGHTS"]
     num_classes = cfg.get("NUM_CLASSES", 2)  # Default to 2 if not provided
-    image_folder = cfg["TEST_IMAGE_FOLDER"]
+    image_folder = cfg["TILE_TEST_IMAGE_FOLDER"]
     tile_size = cfg["TILE_SIZE"]
     overlap = cfg["OVERLAP"]
     use_filter = cfg["USE_FILTER"]
     plot_prediction = cfg["PLOT_PREDICTION"]
     output_folder = cfg["OUTPUT_FOLDER"]
-    annotation_file = cfg.get("TEST_ANNOTATION_FILE")
+    annotation_file = cfg.get("TILE_TEST_ANNOTATION_FILE")
 
     # load the predictor
     predictor = load_predictor(config_file, model_weights, num_classes)

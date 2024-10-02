@@ -52,7 +52,7 @@ class ReindeerTrainer(DefaultTrainer):
 
 
 
-def setup(args):
+def setup(args, output_dir):
     """
     Create configs and perform basic setups.
     """
@@ -73,7 +73,7 @@ def setup(args):
     cfg.CUDNN_BENCHMARK = True
 
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
-    cfg.OUTPUT_DIR = "./../output"
+    cfg.OUTPUT_DIR = output_dir
 
     logger = setup_logger(output=cfg.OUTPUT_DIR)
     logger.setLevel(logging.INFO)
@@ -81,45 +81,44 @@ def setup(args):
     return cfg
 
 def main(args):
-    setup_logger()
-    cfg = setup(args)
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-
+    # load the config file
     current_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(current_dir, './../config.yaml')
-    classes = ["Adult", "Calf"]
-
-    # Load the config file
     with open(config_path) as f:
         cfgP = yaml.load(f, Loader=FullLoader)
-
-    # Split the dataset
+        
+    output_dir = cfgP["OUTPUT_FOLDER"]
     img_dir = cfgP["TILE_FOLDER_PATH"]
     annotations_file = cfgP["TILE_ANNOTATION_PATH"]
-    train_files, val_files, train_annotations, val_annotations = split_dataset(
+        
+    setup_logger(output_dir)
+    cfg = setup(args, output_dir=output_dir)
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+
+    classes = ["Adult", "Calf"]
+
+    # split the dataset
+    _, _, train_annotations, val_annotations = split_dataset(
         annotations_file
     )
-
-    # Register the dataset
+    
+    # register the dataset
     DatasetCatalog.register(
         "reindeer_train", lambda: get_reindeer_dicts(img_dir, train_annotations)
     )
-    # Set thing_classes to the actual categories in your dataset
     MetadataCatalog.get("reindeer_train").set(thing_classes=classes)
 
     DatasetCatalog.register(
         "reindeer_val", lambda: get_reindeer_dicts(img_dir, val_annotations)
     )
     MetadataCatalog.get("reindeer_val").set(thing_classes=classes)
-
-    # Initialize trainer
+    
+    # start training
     trainer = ReindeerTrainer(cfg)
     trainer.resume_or_load(resume=False)
-
-    # Start training
     trainer.train()
 
-    # Evaluate the model
+    # run validation
     evaluator = COCOEvaluator("reindeer_val", cfg, False, output_dir="./output/")
     val_loader = build_detection_test_loader(cfg, "reindeer_val")
     inference_on_dataset(trainer.model, val_loader, evaluator)
