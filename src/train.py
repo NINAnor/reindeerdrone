@@ -29,16 +29,16 @@ class ReindeerTrainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg,
-            mapper=DatasetMapper(cfg, is_train=True, augmentations=build_augmentation(cfg, is_train=True)))
+        return build_detection_train_loader(cfg)
+            #mapper=DatasetMapper(cfg, is_train=True, augmentations=build_augmentation(cfg, is_train=True)))
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
         return build_detection_test_loader(cfg, dataset_name)
 
     def build_hooks(self):
-        hooks = super().build_hooks()  # Correct super() call
-        hooks.insert(-1, EarlyStoppingHook(patience=1000, threshold=0.001))
+        hooks = super().build_hooks()
+        #hooks.insert(-1, EarlyStoppingHook(patience=1000, threshold=0.001))
         hooks.insert(-1, LossEvalHook(
             eval_period = self.cfg.TEST.EVAL_PERIOD,
             model = self.model,
@@ -52,7 +52,7 @@ class ReindeerTrainer(DefaultTrainer):
 
 
 
-def setup(args):
+def setup(args, output_dir):
     """
     Create configs and perform basic setups.
     """
@@ -68,13 +68,12 @@ def setup(args):
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = 0.00025
-    cfg.SOLVER.MAX_ITER = 3000 # TODO: Change this to 3000
+    cfg.SOLVER.MAX_ITER = 3000
     cfg.TEST.EVAL_PERIOD = 100
     cfg.CUDNN_BENCHMARK = True
 
-    # Assuming you have two classes: "Adult" and "Calf"
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # Set to 2 classes if you have both "Adult" and "Calf"
-    cfg.OUTPUT_DIR = "./../output"
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+    cfg.OUTPUT_DIR = output_dir
 
     logger = setup_logger(output=cfg.OUTPUT_DIR)
     logger.setLevel(logging.INFO)
@@ -82,48 +81,47 @@ def setup(args):
     return cfg
 
 def main(args):
-    setup_logger()
-    cfg = setup(args)
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-
+    # load the config file
     current_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(current_dir, './../config.yaml')
-
-    # Load the config file
     with open(config_path) as f:
         cfgP = yaml.load(f, Loader=FullLoader)
-
-    # Split the dataset
+        
+    output_dir = cfgP["OUTPUT_FOLDER"]
     img_dir = cfgP["TILE_FOLDER_PATH"]
     annotations_file = cfgP["TILE_ANNOTATION_PATH"]
-    train_files, val_files, train_annotations, val_annotations = split_dataset(
+        
+    setup_logger(output_dir)
+    cfg = setup(args, output_dir=output_dir)
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+
+    classes = ["Adult", "Calf"]
+
+    # split the dataset
+    _, _, train_annotations, val_annotations = split_dataset(
         annotations_file
     )
-
-    # Register the dataset
+    
+    # register the dataset
     DatasetCatalog.register(
         "reindeer_train", lambda: get_reindeer_dicts(img_dir, train_annotations)
     )
-    # Set thing_classes to the actual categories in your dataset
-    MetadataCatalog.get("reindeer_train").set(thing_classes=["Adult", "Calf"])
+    MetadataCatalog.get("reindeer_train").set(thing_classes=classes)
 
     DatasetCatalog.register(
         "reindeer_val", lambda: get_reindeer_dicts(img_dir, val_annotations)
     )
-    MetadataCatalog.get("reindeer_val").set(thing_classes=["Adult", "Calf"])
-
-    # Initialize trainer
+    MetadataCatalog.get("reindeer_val").set(thing_classes=classes)
+    
+    # start training
     trainer = ReindeerTrainer(cfg)
     trainer.resume_or_load(resume=False)
-
-    # Start training
     trainer.train()
 
-    # Evaluate the model
+    # run validation
     evaluator = COCOEvaluator("reindeer_val", cfg, False, output_dir="./output/")
     val_loader = build_detection_test_loader(cfg, "reindeer_val")
     inference_on_dataset(trainer.model, val_loader, evaluator)
-
 
 
 def invoke_main() -> None:
@@ -140,5 +138,4 @@ def invoke_main() -> None:
 
 
 if __name__ == "__main__":
-
     invoke_main()

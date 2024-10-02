@@ -32,3 +32,20 @@ def split_dataset(annotations_file, split_ratio=0.8):
     val_annotations = [{'image_id': image_annotations[file], 'annotations': annotations[image_annotations[file]]} for file in val_files]
 
     return train_files, val_files, train_annotations, val_annotations
+
+def create_test_dataset(annotations_file):
+    with open(annotations_file) as f:
+        coco = json.load(f)
+
+    image_annotations = {normalize_image_id(img['file_name']): img['id'] for img in coco['images']}
+    annotations = {img_id: [] for img_id in image_annotations.values()}
+
+    for anno in coco['annotations']:
+        norm_image_id = normalize_image_id(anno['image_id'])
+        if norm_image_id in annotations:
+            annotations[norm_image_id].append(anno)
+
+    test_files = list(image_annotations.keys())
+    test_annotations = [{'image_id': image_annotations[file], 'annotations': annotations[image_annotations[file]]} for file in test_files]
+
+    return test_files, test_annotations
