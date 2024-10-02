@@ -80,4 +80,6 @@ The script will load the model that has been trained. The script will create a f
 
 In the `config.yaml` file you can choose to plot the predictions (parameter `TRUE / FALSE`). If `TRUE` plots of the satellite pictures with annotations should be created in `predict/image/`. You can also set the `USE_FILTER` parameter `TRUE / FALSE` if you want to remove duplicate bounding boxes from the predictions.
 
-![Model prediction for a satellite picture](./predict/image/pred_crop.png)
+An example of the visualizations can be seen in the picture underneath. The dashed lines shows ground truth and the annotated bounding boxes. The lines shows the predicted bounding box along with the predicted label and its probability.
+
+![Model prediction for a satellite picture](./predict/image/DSC09929_tile26_pred.png)
