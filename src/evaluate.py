@@ -1,14 +1,12 @@
 import logging
 import os
 import yaml
-import json
 
 from yaml import FullLoader
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.data import (
     DatasetCatalog,
-    DatasetMapper,
     MetadataCatalog,
     build_detection_test_loader,
 )
@@ -17,9 +15,6 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 
 from dataset_utils import get_reindeer_dicts, create_test_dataset
-from torch.utils.tensorboard import SummaryWriter
-
-from torch.utils.tensorboard import SummaryWriter
 from detectron2.engine import DefaultTrainer
 
 
@@ -73,7 +68,7 @@ def evaluate(args):
     
     classes = ["Adult", "Calf"]
     
-    # for some reason it needs the train dataset to be registered before the test dataset
+    # for some reason it needs the train dataset to be registered for evaluation
     _, train_anno = create_test_dataset(train_anno_file)
         
     DatasetCatalog.register(
@@ -93,13 +88,9 @@ def evaluate(args):
     evaluator_test = COCOEvaluator("reindeer_test", cfg, False, output_dir=output_dir)
     test_loader = build_detection_test_loader(cfg, "reindeer_test")
 
-    # Use the custom trainer to load the model and perform inference
     trainer = DefaultTrainer(cfg)
     trainer.resume_or_load(resume=True)
     inference_on_dataset(trainer.model, test_loader, evaluator_test)
-
-    # Close the TensorBoard writer after evaluation
-    trainer.writer.close()
 
 
 def invoke_main() -> None:

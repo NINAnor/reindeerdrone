@@ -12,11 +12,9 @@ from utils import tile_image
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import numpy as np
 
 def visualize_preds_with_gt(image, preds, annotations, output_path, class_names=["Adult", "Calf"]):
     # convert BGR to RGB if necessary

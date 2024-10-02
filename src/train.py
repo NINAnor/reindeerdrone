@@ -29,8 +29,8 @@ class ReindeerTrainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg,
-            mapper=DatasetMapper(cfg, is_train=True, augmentations=build_augmentation(cfg, is_train=True)))
+        return build_detection_train_loader(cfg)
+            #mapper=DatasetMapper(cfg, is_train=True, augmentations=build_augmentation(cfg, is_train=True)))
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
@@ -38,7 +38,7 @@ class ReindeerTrainer(DefaultTrainer):
 
     def build_hooks(self):
         hooks = super().build_hooks()
-        hooks.insert(-1, EarlyStoppingHook(patience=1000, threshold=0.001))
+        #hooks.insert(-1, EarlyStoppingHook(patience=1000, threshold=0.001))
         hooks.insert(-1, LossEvalHook(
             eval_period = self.cfg.TEST.EVAL_PERIOD,
             model = self.model,
