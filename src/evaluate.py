@@ -17,6 +17,27 @@ from detectron2.utils.logger import setup_logger
 from dataset_utils import get_reindeer_dicts, create_test_dataset
 from detectron2.engine import DefaultTrainer
 
+import json
+
+def save_evaluation_results(cfgP, evaluation_results):
+    model_weights_path = os.path.basename(cfgP["MODEL_WEIGHTS"])
+    model_weights_name = os.path.basename(os.path.dirname(model_weights_path))
+    evaluation_results["experiment_name"] = model_weights_name
+    
+    evaluation_output_path = os.path.join(cfgP["EVALUATION_OUTPUT_PATH"], "test_eval_results.json")
+    if os.path.exists(evaluation_output_path):
+        with open(evaluation_output_path, "r") as f:
+            data = json.load(f)
+    else:
+        data = {"test_results": []}
+    
+    data["test_results"].append(evaluation_results)
+    
+    with open(evaluation_output_path, "w") as f:
+        json.dump(data, f, indent=4)
+    
+    print(f"Evaluation metrics saved to {evaluation_output_path}")
+
 
 def setup(args, output_dir):
     """
@@ -62,9 +83,9 @@ def evaluate(args):
     train_img_dir = cfgP["TILE_FOLDER_PATH"]
     train_anno_file = cfgP["TILE_ANNOTATION_PATH"]
     output_dir = cfgP["OUTPUT_FOLDER"]
+    evaluation_output_file = cfgP.get("EVALUATION_OUTPUT_PATH", "./")
     
     cfg = setup(args, output_dir=output_dir)
-    
     
     classes = ["Adult", "Calf"]
     
@@ -90,7 +111,10 @@ def evaluate(args):
 
     trainer = DefaultTrainer(cfg)
     trainer.resume_or_load(resume=True)
-    inference_on_dataset(trainer.model, test_loader, evaluator_test)
+    evaluation_results = inference_on_dataset(trainer.model, test_loader, evaluator_test)
+    
+    if cfgP["STORE_EVALUATION_RESULTS"]:
+        save_evaluation_results(evaluation_output_file, evaluation_results)
 
 
 def invoke_main() -> None:
