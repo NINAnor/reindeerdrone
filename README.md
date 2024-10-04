@@ -38,9 +38,91 @@ We are using [LabelStudio] to annotate the images. After annonating the images i
 
 Then, follow the pipeline!
 
-## Set up config.yaml
+## Set up `config.yaml`
 
-In the file `example.config.yaml` one can see the different configs available for all scripts. This is mainly used for path management, but some other parameters can also be set, which will be referred to later.
+In the file `config.example.yaml` one can see the different configs available for all scripts. This is mainly used for path management, but some other parameters can also be set, which will be referred to later.
+
+### Configuration Values
+
+Below is a detailed description of all the configuration values in the provided config file.
+
+#### Path management
+
+- **`ANNOTATION_PATH`**:  
+  Path to the annotation file for the non-tiled test dataset.  
+  Example: `/home/taheera.ahmed/data/reindeerdrone/whole/test/result.json`
+
+- **`IMAGES_FOLDER_PATH`**:  
+  Path to the directory containing the non-tiled test images.  
+  Example: `/home/taheera.ahmed/data/reindeerdrone/whole/test`
+
+- **`TILE_ANNOTATION_PATH`**:  
+  Path to the annotation file for the tiled training dataset.  
+  Example: `/home/taheera.ahmed/data/reindeerdrone/tiles/train/new_annotations.json`
+
+- **`TILE_FOLDER_PATH`**:  
+  Path to the directory containing the tiled training images.  
+  Example: `/home/taheera.ahmed/data/reindeerdrone/tiles/train/images`
+
+- **`TILE_TEST_ANNOTATION_PATH`**:  
+  Path to the annotation file for the tiled test dataset.  
+  Example: `/home/taheera.ahmed/data/reindeerdrone/tiles/test/new_annotations.json`
+
+- **`TILE_TEST_FOLDER_PATH`**:  
+  Path to the directory containing the tiled test images.  
+  Example: `/home/taheera.ahmed/data/reindeerdrone/tiles/test`
+
+- **`OUTPUT_FOLDER`**:  
+  Path to the directory where output files, such as intermediate data and results, will be saved.  
+  Example: `/home/taheera.ahmed/code/reindeerdrone/output/02_hyperparam_opt`
+
+#### Data processing (`dataset.py`)
+
+- **`TILE_SIZE`**:  
+  The size of the tiles (in pixels) that images will be divided into.  
+  Default: `1024`
+
+- **`OVERLAP`**:  
+  The number of pixels by which tiles overlap.  
+  Default: `100`
+
+- **`PLOT_ANNOTATION`**:  
+  A boolean flag indicating whether to plot the annotations during data processing.  
+  Default: `False`
+
+#### Training (`train.py`)
+
+- **`OPTUNA_TRIALS`**:  
+  The number of trials to run for hyperparameter optimization using Optuna.  
+  Example: `20`
+
+#### Evaluation (`evaluation.py`)
+
+- **`STORE_EVALUATION_RESULTS`**:  
+  A boolean flag indicating whether evaluation results should be stored in a file.  
+  Default: `True`
+
+- **`EVALUATION_OUTPUT_FILE`**:  
+  Path to the file where evaluation metrics will be stored.  
+  Example: `/home/taheera.ahmed/code/reindeerdrone/output/evaluation_metrics.json`
+
+#### Predictions (`predict.py`)
+
+- **`CONFIG_FILE`**:  
+  The path to the Detectron2 model configuration file used for making predictions.  
+  Example: `COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml`
+
+- **`MODEL_WEIGHTS`**:  
+  Path to the trained model weights that will be used for making predictions.  
+  Example: `/home/taheera.ahmed/code/reindeerdrone/output/02_hyperparam_opt/model_final.pth`
+
+- **`USE_FILTER`**:  
+  A boolean flag indicating whether to apply a filter to remove duplicate bounding boxes from predictions.  
+  Default: `True`
+
+- **`PLOT_PREDICTION`**:  
+  A boolean flag indicating whether to save images of the predictions alongside ground truth bounding boxes.  
+  Default: `True`
 
 ## Create the training dataset dataset
 
@@ -69,6 +151,7 @@ python3 src/evaluate.py
 ```
 
 This script will use the trained model and run evaluation on the model by using the test set. The test set should be tiled as well using the ``dataset.py`` script mentioned earlier.
+It is possible to set `STORE_EVALUATION_RESULTS` which will store a JSON-file with the final evaluation metrics from the test set.
 
 ## Predict the trained model
 
