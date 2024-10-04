@@ -52,7 +52,7 @@ class ReindeerTrainer(DefaultTrainer):
         return hooks
 
 
-def objective(trial):
+def objective(trial, output_dir):
     # Set up the config as before
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
@@ -61,9 +61,6 @@ def objective(trial):
     cfg.SOLVER.BASE_LR = trial.suggest_float("lr", 1e-5, 1e-3, log=True)
     cfg.SOLVER.MAX_ITER = trial.suggest_int("max_iter", 1000, 5000)
     cfg.SOLVER.IMS_PER_BATCH = trial.suggest_categorical("ims_per_batch", [2, 4, 8])
-    
-    cfg.INPUT.MIN_SIZE_TRAIN=800
-    cfg.INPUT.MAX_SIZE_TRAIN=1024
     
     # Configure the rest of the setup
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x")
@@ -75,7 +72,8 @@ def objective(trial):
     cfg.CUDNN_BENCHMARK = True
     
     # TODO: Set the output directory for the trial using config
-    output_dir = f"/home/taheera.ahmed/code/reindeerdrone/output/02_hyperparam_opt/optuna_trial_{trial.number}"
+    
+    output_dir = f"{output_dir}/optuna_trial_{trial.number}"
     cfg.OUTPUT_DIR = output_dir
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     
@@ -118,6 +116,7 @@ def main(args):
     img_dir = cfgP["TILE_FOLDER_PATH"]
     annotations_file = cfgP["TILE_ANNOTATION_PATH"]
     optuna_trails = cfgP.get("OPTUNA_TRIALS", 20)
+    output_dir = cfgP["OUTPUT_FOLDER"]
     
     # Register the dataset
     classes = ["Adult", "Calf"]
@@ -137,7 +136,7 @@ def main(args):
     study = optuna.create_study(direction="minimize")
     
     # optimize the objective function
-    study.optimize(objective, n_trials=optuna_trails)
+    study.optimize(lambda trial: objective(trial, output_dir=output_dir), n_trials=optuna_trails)
 
     # output the best trial
     print(f"Best trial: {study.best_trial.value}")
