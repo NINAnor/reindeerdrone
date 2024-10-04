@@ -153,7 +153,7 @@ python3 src/evaluate.py
 This script will use the trained model and run evaluation on the model by using the test set. The test set should be tiled as well using the ``dataset.py`` script mentioned earlier.
 It is possible to set `STORE_EVALUATION_RESULTS` which will store a JSON-file with the final evaluation metrics from the test set.
 
-## Predict the trained model
+## Predict with the trained model
 
 ```bash
 python3 src/predict.py
@@ -165,4 +165,13 @@ In the `config.yaml` file you can choose to plot the predictions (parameter `TRU
 
 An example of the visualizations can be seen in the picture underneath. The dashed lines shows ground truth and the annotated bounding boxes. The lines shows the predicted bounding box along with the predicted label and its probability.
 
-![Model prediction for a satellite picture](./predict/image/DSC09929_tile26_pred.png)
+![Model prediction for a satellite picture](./assets/readme/DSC09929_tile26_pred.png)
+
+```bash
+python3 src/app.py
+```
+
+This script will run a Gradio application based on the model weights in the config and some example images which is in the `assets/gradio_example_images`. It is also possible to upload your own photos.
+A screenshot of the application can be found underneath.
+
+![Gradi application](./assets/readme/gradio_app.png)
