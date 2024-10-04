@@ -163,13 +163,13 @@ def process_folder(cfg):
     config_file = cfg["CONFIG_FILE"]
     model_weights = cfg["MODEL_WEIGHTS"]
     num_classes = cfg.get("NUM_CLASSES", 2)  # Default to 2 if not provided
-    image_folder = cfg["TILE_TEST_IMAGE_FOLDER"]
+    image_folder = cfg["TILE_TEST_FOLDER_PATH"]
     tile_size = cfg["TILE_SIZE"]
     overlap = cfg["OVERLAP"]
     use_filter = cfg["USE_FILTER"]
     plot_prediction = cfg["PLOT_PREDICTION"]
     output_folder = cfg["OUTPUT_FOLDER"]
-    annotation_file = cfg.get("TILE_TEST_ANNOTATION_FILE")
+    annotation_file = cfg["TILE_TEST_ANNOTATION_PATH"]
 
     # load the predictor
     predictor = load_predictor(config_file, model_weights, num_classes)
@@ -179,15 +179,16 @@ def process_folder(cfg):
         annotations = json.load(f)
 
     # create output directories
-    os.makedirs(os.path.join(output_folder, "image"), exist_ok=True)
-    os.makedirs(os.path.join(output_folder, "json"), exist_ok=True)
+    pred_output_folder = os.path.join(output_folder, "predictions")
+    os.makedirs(os.path.join(pred_output_folder, "image"), exist_ok=True)
+    os.makedirs(os.path.join(pred_output_folder, "json"), exist_ok=True)
 
     # get the image filenames from the folder
     image_filenames = [f for f in os.listdir(image_folder) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
     for image_filename in tqdm(image_filenames, desc="Processing Images"):
         image_path = os.path.join(image_folder, image_filename)
-        output_image_path = os.path.join(output_folder, "image", f"{os.path.splitext(image_filename)[0]}_pred.png")
-        output_json_path = os.path.join(output_folder, "json", f"{os.path.splitext(image_filename)[0]}_pred.json")
+        output_image_path = os.path.join(pred_output_folder, "image", f"{os.path.splitext(image_filename)[0]}_pred.png")
+        output_json_path = os.path.join(pred_output_folder, "json", f"{os.path.splitext(image_filename)[0]}_pred.json")
 
         image = cv2.imread(image_path)
 
