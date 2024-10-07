@@ -6,30 +6,22 @@ This repository contained code for training and using a model for detecting rein
 
 In this repository we are using [detectron2](https://github.com/facebookresearch/detectron2). To install it follow the procedure:
 
-- Create a virtual environment:
+- If `poetry` is not install, install it by running:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+pipx install poetry
 ```
 
-- Install detectron2 and the other dependancies:
-
-```
-# FIX for installing detectron2, see: https://github.com/Dao-AILab/flash-attention/issues/253
-FLASH_ATTENTION_SKIP_CUDA_BUILD=TRUE pip install flash-attn --no-build-isolation 
-
-# Install dependancies
-git clone https://github.com/facebookresearch/detectron2.git
-pip install -e detectron2
-pip install -r requirements.txt
-```
-
-
-- Activate the virtual environment
+- Make the Python scripts executable by changing their file permissions
 
 ```bash
-source .venv/bin/activate
+chmod +x src/dataset.py src/evaluate.py src/predict.py src/train.py src/app.py 
+```
+
+Install the required packages
+
+```bash
+poetry install
 ```
 
 ## Import data from LabelStudio
@@ -127,7 +119,7 @@ Below is a detailed description of all the configuration values in the provided 
 ## Create the training dataset dataset
 
 ```bash
-python3 src/dataset.py
+poetry run src/dataset.py
 ```
 
 Because the satellite images are too big to be processed efficiently by `detectron2` we split the images into `tiles`. **Tile size** can be changed in the `config.yaml` file and can slighlty change the results (we recommand to do a `hyperparameter search` to search for the optimal tile size).
@@ -137,7 +129,7 @@ The script will create a `tiles` folder containing the tiles of the processed sa
 ## Train detectron2
 
 ```bash
-python3 src/train.py
+poetry run src/train.py
 ```
 
 With this script we train a `Detectron2` model with a [faster-rcnn architecture](https://github.com/facebookresearch/detectron2/blob/main/configs/COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml) as backbone. Note that it is possible to change the backbone by choosing another [Detectron compliant](https://github.com/facebookresearch/detectron2/tree/main/configs/COCO-Detection) model.
@@ -147,7 +139,7 @@ The script should create a folder `output` that contains `model_final.pth`, the 
 ## Evaluate the trained model
 
 ```bash
-python3 src/evaluate.py
+poetry run src/evaluate.py
 ```
 
 This script will use the trained model and run evaluation on the model by using the test set. The test set should be tiled as well using the ``dataset.py`` script mentioned earlier.
@@ -156,7 +148,7 @@ It is possible to set `STORE_EVALUATION_RESULTS` which will store a JSON-file wi
 ## Predict with the trained model
 
 ```bash
-python3 src/predict.py
+poetry run src/predict.py
 ```
 
 The script will load the model that has been trained. The script will create a folder inside the `OUTPUT_FOLDER` defined in `config.yaml`: `/predict/image` containing the predicted bounding boxes and `./predict/json` containing the a `.json` file per image documenting all the bounding box coordinates.
@@ -168,7 +160,7 @@ An example of the visualizations can be seen in the picture underneath. The dash
 ![Model prediction for a satellite picture](./assets/readme/DSC09929_tile26_pred.png)
 
 ```bash
-python3 src/app.py
+poetry run src/app.py
 ```
 
 This script will run a Gradio application based on the model weights in the config and some example images which is in the `assets/gradio_example_images`. It is also possible to upload your own photos.

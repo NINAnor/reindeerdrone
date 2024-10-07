@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 import gradio as gr
 import torch
-import os
-import yaml
 import cv2
+from pathlib import Path
+import yaml
 
 from yaml import FullLoader
 from detectron2.engine import DefaultPredictor
@@ -10,15 +12,20 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
-
 from dataset_utils import get_reindeer_dicts
+from functools import partial
 
-# function to load the model
 def load_model():
+    """ Function to load the model and configuration settings
+
+    Returns:
+        predictor (DefaultPredictor): The predictor object
+        cfg (CfgNode): The configuration object
+    """
     dataset_name = "reindeer_test"
     
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(current_dir, './../config.yaml')
+    current_dir = Path(__file__).resolve().parent
+    config_path = current_dir / './../config.yaml'
     
     with open(config_path) as f:
         cfgP = yaml.load(f, Loader=FullLoader)
@@ -28,9 +35,10 @@ def load_model():
     model_weights = cfgP["MODEL_WEIGHTS"]
 
     if dataset_name not in DatasetCatalog.list():
-        DatasetCatalog.register(dataset_name, lambda: get_reindeer_dicts(img_dir, annotations_file))
+        DatasetCatalog.register(dataset_name, partial(get_reindeer_dicts, img_dir=img_dir, annotations_file=annotations_file))
         MetadataCatalog.get(dataset_name).set(thing_classes=["Adult", "Calf"])
 
+    # setting up the model configuration
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
@@ -44,37 +52,64 @@ def load_model():
     return predictor, cfg
 
 def predict_and_visualize(image, predictor, cfg):
+    """Predict and visualize bounding boxes on the input image using the specified model.
+
+    Args:
+        image (numpy.ndarray): The input image in RGB format as a NumPy array.
+        predictor (DefaultPredictor): The Detectron2 predictor object used to make predictions.
+        cfg (CfgNode): The Detectron2 configuration object containing model and dataset configurations.
+
+    Returns:
+        numpy.ndarray: The output image in RGB format with bounding boxes and instance predictions drawn.
+    """
     image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     outputs = predictor(image_bgr)
 
-    # extract the bounding boxes and predictions
+    # opencv uses BGR by default, but the visualizer expects RGB, so we reverse the channels
     v = Visualizer(image_bgr[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TEST[0]), scale=1.2)
     v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
-    # get the output image with drawn bounding boxes
     output_image = v.get_image()[:, :, ::-1] 
 
     return output_image
 
-# gradio interface
-def gradio_interface(image):
-    predictor, cfg = load_model()
+def gradio_interface(image, predictor, cfg):
+    """Gradio interface function to predict and visualize bounding boxes.
+
+    This function is used as the callback function for the Gradio interface. 
+    It takes an input image, passes it to the prediction model, and returns 
+    the image with bounding boxes drawn around the detected reindeer.
+
+    Args:
+        image (numpy.ndarray): The input image in RGB format as a NumPy array.
+        predictor (DefaultPredictor): The Detectron2 predictor object used to make predictions.
+        cfg (CfgNode): The Detectron2 configuration object containing model and dataset configurations.
+
+    Returns:
+        numpy.ndarray: The output image in RGB format with bounding boxes and predictions drawn.
+    """
     result_image = predict_and_visualize(image, predictor, cfg)
     return result_image
 
-example_images_dir = os.path.join(os.path.dirname(__file__), "../assets/gradio_example_images")
-example_images = [os.path.join(example_images_dir, img) for img in os.listdir(example_images_dir) if img.endswith(('png', 'jpg', 'jpeg'))]
+def main():
+    predictor, cfg = load_model()
+    interface_fn = partial(gradio_interface, predictor=predictor, cfg=cfg)
 
-# create Gradio interface
-gr_interface = gr.Interface(
-    fn=gradio_interface,
-    inputs=gr.Image(type="numpy", label="Upload or Select an Example Image"),
-    outputs="image",
-    title="Reindeer Detection Model",
-    description="Upload a photo of reindeer or select an example image to get predicted bounding boxes.",
-    examples=example_images 
-)
+    # define example images
+    example_images_dir = Path(__file__).resolve().parent / "../assets/gradio_example_images"
+    example_images = list(example_images_dir.glob("*.png"))
+    
+    # create gradio interface
+    gr_interface = gr.Interface(
+        fn=interface_fn,
+        inputs=gr.Image(type="numpy", label="Upload or select an example image"),
+        outputs="image",
+        title="Reindeer detection model",
+        description="Upload a photo of reindeer or select an example image to get predicted bounding boxes.",
+        examples=[str(img) for img in example_images]
+    )
 
-# launch the interface
-if __name__ == "__main__":
     gr_interface.launch()
+
+if __name__ == "__main__":
+    main()
