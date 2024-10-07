@@ -114,7 +114,7 @@ def evaluate(args):
     evaluation_results = inference_on_dataset(trainer.model, test_loader, evaluator_test)
     
     if cfgP["STORE_EVALUATION_RESULTS"]:
-        save_evaluation_results(evaluation_output_file, evaluation_results)
+        save_evaluation_results(cfgP, evaluation_results)
 
 
 def invoke_main() -> None:
