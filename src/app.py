@@ -97,8 +97,9 @@ def main():
     interface_fn = partial(gradio_interface, predictor=predictor, cfg=cfg)
 
     # define example images
-    example_images_dir = Path(__file__).resolve().parent.parent / "assets" / "gradio_example_images"
-    example_images = list(example_images_dir.glob("*.png"))
+    example_images_drone_dir = Path(__file__).resolve().parent.parent / "assets" / "gradio_example_images" / "drone_images"
+    example_images_heli_dir = Path(__file__).resolve().parent.parent / "assets" / "gradio_example_images" / "helicopter_images"
+    example_images = list(example_images_drone_dir.glob("*.png")) + list(example_images_heli_dir.glob("*.JPG")) 
     
     # create gradio interface
     gr_interface = gr.Interface(
