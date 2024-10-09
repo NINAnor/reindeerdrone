@@ -9,6 +9,8 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "~=3.10.0"
 torch = "2.3.1"
+# Prebulit wheel https://github.com/facebookresearch/detectron2/discussions/5200
+detectron2 = {version = "0.6+2a420edpt2.3.1cu121", source = "torch_packages_builder"}
 ultralytics = "^8.2.42"
 matplotlib = "^3.9.0"
 opencv-python = "^4.10.0.84"
@@ -22,9 +24,7 @@ torchvision = "0.18.1"
 tqdm = "4.66.4"
 gradio = "4.44.1"
 optuna = "^4.0.0"
-
-# Prebulit wheel https://github.com/facebookresearch/detectron2/discussions/5200
-detectron2 = {version = "0.6+2a420edpt2.3.1cu121", source = "torch_packages_builder"}
+marimo = "^0.9.4"
 
 [[tool.poetry.source]]
 name = "torch_packages_builder"
