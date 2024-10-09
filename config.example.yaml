@@ -32,7 +32,7 @@ OPTUNA_TRAILS: # Number of trials for hyperparameter optimization: 20
 ##############
 
 STORE_EVALUATION_RESULTS: # Store the evaluation results in a json file: True
-EVALUATION_OUTPUT_FILE: # Output file where metrics will be stored: "/home/taheera.ahmed/code/reindeerdrone/output/evaluation_metrics.json"
+EVALUATION_OUTPUT_PATH: # Output file where metrics will be stored: "/home/taheera.ahmed/code/reindeerdrone/output"
 
 
 ###############
