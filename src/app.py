@@ -25,7 +25,8 @@ def load_model():
     dataset_name = "reindeer_test"
     
     current_dir = Path(__file__).resolve().parent
-    config_path = current_dir / './../config.yaml'
+    config_path = current_dir.parent / "config.yaml"
+
     
     with open(config_path) as f:
         cfgP = yaml.load(f, Loader=FullLoader)
@@ -96,7 +97,7 @@ def main():
     interface_fn = partial(gradio_interface, predictor=predictor, cfg=cfg)
 
     # define example images
-    example_images_dir = Path(__file__).resolve().parent / "../assets/gradio_example_images"
+    example_images_dir = Path(__file__).resolve().parent.parent / "assets" / "gradio_example_images"
     example_images = list(example_images_dir.glob("*.png"))
     
     # create gradio interface

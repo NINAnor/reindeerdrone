@@ -6,16 +6,10 @@ This repository contained code for training and using a model for detecting rein
 
 In this repository we are using [detectron2](https://github.com/facebookresearch/detectron2). To install it follow the procedure:
 
-- If `poetry` is not install, install it by running:
+- Install `poetry` by running:
 
 ```bash
 pipx install poetry
-```
-
-- Make the Python scripts executable by changing their file permissions
-
-```bash
-chmod +x src/dataset.py src/evaluate.py src/predict.py src/train.py src/app.py 
 ```
 
 Install the required packages

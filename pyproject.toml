@@ -26,9 +26,6 @@ optuna = "^4.0.0"
 # Prebulit wheel https://github.com/facebookresearch/detectron2/discussions/5200
 detectron2 = {version = "0.6+2a420edpt2.3.1cu121", source = "torch_packages_builder"}
 
-# The following line should not be necessary; drop it by the end of October 2024
-#flash-attn = {url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu123torch2.3cxx11abiFALSE-cp312-cp312-linux_x86_64.whl"}
-
 [[tool.poetry.source]]
 name = "torch_packages_builder"
 url = "https://miropsota.github.io/torch_packages_builder"
