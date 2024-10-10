@@ -6,3 +6,4 @@ tiles/
 .vscode/
 notebooks/detr_finetuned_reindeerdrone
 config.yaml
+assets/gradio_example_images/helicopter_images
