@@ -25,6 +25,10 @@ tqdm = "4.66.4"
 gradio = "4.44.1"
 optuna = "^4.0.0"
 marimo = "^0.9.4"
+scikit-learn = "^1.5.2"
+plotly = "^5.24.1"
+altair = "^5.4.1"
+ipython = "^8.28.0"
 
 [[tool.poetry.source]]
 name = "torch_packages_builder"
