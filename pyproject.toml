@@ -19,7 +19,7 @@ tensorboard-data-server = "0.7.2"
 torchmetrics = "1.4.0.post0"
 torchvision = "0.18.1"
 tqdm = "4.66.4"
-gradio = "4.44.1"
+gradio = "5.0.0"
 optuna = "^4.0.0"
 
 # Prebulit wheel https://github.com/facebookresearch/detectron2/discussions/5200
