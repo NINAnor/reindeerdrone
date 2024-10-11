@@ -10,7 +10,7 @@ def __(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(mo):
     mo.md(r"""## Importing libraries""")
     return
@@ -83,8 +83,8 @@ def __(FullLoader, __file__, os, yaml):
 
 @app.cell
 def __(cfgP):
-    config_file = cfgP["CONFIG_FILE"]
-    model_weights = cfgP["MODEL_WEIGHTS"]
+    config_file = "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"
+    model_weights = "/home/taheera.ahmed/code/reindeerdrone/output/00_default_augs/best_val_loss_model.pth"
     num_classes = cfgP.get("NUM_CLASSES", 2)  # Default to 2 if not provided
     image_folder = cfgP["TILE_TEST_FOLDER_PATH"]
     tile_size = cfgP["TILE_SIZE"]
@@ -398,7 +398,7 @@ def __(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(mo):
     mo.md(
         r"""
@@ -411,27 +411,10 @@ def __(mo):
 
 
 @app.cell(hide_code=True)
-def __(confusion_matrix, mo, plt, sns, y_pred, y_true):
-    def plot_confusion_matrix(y_true, y_pred, labels, title='Confusion Matrix', cmap=plt.cm.Blues):
-        # Generate the confusion matrix
-        cm = confusion_matrix(y_true, y_pred, labels=labels)
-        # Use seaborn to create a heatmap for better visualization
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt="d", cmap=cmap, cbar=False, xticklabels=["Adult", "Calf"], yticklabels=["Adult", "Calf"])
+def __(mo):
+    mo.md(
+        r"""
 
-        # Formatting the plot
-        plt.title(title, fontsize=16)
-        plt.xlabel('Predicted Label', fontsize=14)
-        plt.ylabel('True Label', fontsize=14)
-        plt.tight_layout()
-
-        # Show the plot
-        plt.show()
-
-    # Example usage after getting y_true and y_pred from the previous code:
-    plot_confusion_matrix(y_true, y_pred, labels=[0, 1], title="Reindeer Detection Confusion Matrix")
-
-    mo.md("""
         ### Confusion matrix 
 
         #### Upper row
@@ -441,7 +424,58 @@ def __(confusion_matrix, mo, plt, sns, y_pred, y_true):
 
         #### Lower row
         There are 57 predictions which have been incorrectly predicted as "Adult" when they were annotated as "Calf". Lastly, there are 84 reindeers which have been correctly classified as "Calf" when they have been annotated as "Calf".
-    """)
+
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def __(alt, confusion_matrix, pd, y_pred, y_true):
+    def plot_confusion_matrix(y_true, y_pred, labels, title='Confusion Matrix'):
+        # Generate the confusion matrix
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        
+        # Create a DataFrame from the confusion matrix
+        cm_df = pd.DataFrame(cm, index=["Adult", "Calf"], columns=["Adult", "Calf"])
+        
+        # Convert the DataFrame to long format for Altair
+        cm_long = cm_df.reset_index().melt(id_vars='index')
+        cm_long.columns = ['True Label', 'Predicted Label', 'Count']
+        
+        # Create the heatmap using Altair
+        heatmap = alt.Chart(cm_long).mark_rect().encode(
+            alt.X('Predicted Label:N', title='Predicted Label'),
+            alt.Y('True Label:N', title='True Label'),
+            alt.Color('Count:Q', scale=alt.Scale(scheme='blues'), title='Count'),
+            tooltip=['True Label:N', 'Predicted Label:N', 'Count:Q']
+        ).properties(
+            title=title,
+            width=800,
+            height=500
+        )
+        
+        # Overlay text to show the counts in each square
+        text = heatmap.mark_text(baseline='middle', size=20).encode(
+            text='Count:Q',
+            color=alt.condition(
+                alt.datum.Count > 0,  # If the count is greater than 0, display in black, otherwise white
+                alt.value('black'),
+                alt.value('white')
+            )
+        )
+        
+        # Combine heatmap and text
+        heatmap_with_text = heatmap + text
+        
+        # Display the heatmap with numbers
+        heatmap_with_text.show()
+
+    # Example usage after getting y_true and y_pred from the previous code:
+
+
+    plot_confusion_matrix(y_true, y_pred, labels=[0, 1], title="Reindeer Detection Confusion Matrix")
+
     return (plot_confusion_matrix,)
 
 
@@ -510,7 +544,7 @@ def __(false_positive_df):
 
 
 @app.cell(hide_code=True)
-def __(Image, false_positive_df, math, patches, plt, predictions):
+def __(Image, false_positive_df, math, mo, patches, plt, predictions):
     top_false_positives = false_positive_df.sort_values(by='False Positives', ascending=False).head(6)
 
     top_false_positives_list = top_false_positives['Image'].values.tolist()
@@ -541,7 +575,7 @@ def __(Image, false_positive_df, math, patches, plt, predictions):
         axes = axes.flatten()  # Flatten the axes array for easier iteration
         red_patch = patches.Patch(color='red', label='Annotation')
         blue_patch = patches.Patch(color='blue', label='Prediction')
-        
+
         for i, _pred in enumerate(plot_preds):
             img = Image.open(_pred['data_path'])
             ax = axes[i]
@@ -553,16 +587,16 @@ def __(Image, false_positive_df, math, patches, plt, predictions):
                 x, y, width, height = ann_bbox['bbox']
                 rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor='r', facecolor='none')
                 ax.add_patch(rect)
-            
+
             # Add bounding boxes for predictions
             for pred_bbox in _pred['preds']:
                 x, y, width, height = convert_to_coco_format(pred_bbox[0])
                 rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor='b', facecolor='none')
                 ax.add_patch(rect)
-            
+
             # Remove axes for a cleaner look
             ax.axis('off')
-            
+
             if i == 0:
                 ax.legend(handles=[red_patch, blue_patch], loc='upper right')
 
@@ -575,7 +609,8 @@ def __(Image, false_positive_df, math, patches, plt, predictions):
 
     # Call the function to plot all images in a grid with 2 columns
     plot_images_in_grid(plot_preds)
-
+    mo.md("""
+    The worst examples with many false positives""")
     return (
         convert_to_coco_format,
         data_path,
@@ -593,7 +628,7 @@ def __(mo):
         ## Q5
         _Is there any information from the model that could be used to e.g., classify the various source pictures/tiles as “distant” or “close-ups”. For instance, average absolute size of the box placed around adult reindeer by the model or by the observer? This could then be used as a categorical index for flight height. This would be helpful if we should describe some of the current limitations._
 
-        This would be a quite difficult task I think. We could look at the average bounding box size for each image, but I think the sizes of the bounding boxes varies too much per annotation per image..
+        This would be a quite difficult task I think. We could look at the average bounding box size for each image, but I think the sizes of the bounding boxes varies too much per annotation per image.. 
         """
     )
     return
