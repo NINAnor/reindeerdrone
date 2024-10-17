@@ -648,7 +648,6 @@ def __(false_negative_images, false_positive_images, pd):
 
 @app.cell(hide_code=True)
 def __(alt, false_negative_df, false_positive_df, pd):
-
     # Merge the two dataframes on 'Image'
     _merged_df = pd.merge(false_positive_df, false_negative_df, on='Image')
 
@@ -811,10 +810,10 @@ def __(mo):
 
 
 @app.cell(hide_code=True)
-def __(convert_to_coco_format):
-    def fix_preds(predictions):
+def __(convert_to_coco_format, predictions):
+    def fix_preds(_predictions):
         count_id = 0
-        for _preds in predictions:
+        for _preds in _predictions:
             _img_id = _preds['image_id']
             temp_pred_bbox = {}
             temp_pred_bboxs = []
@@ -829,13 +828,21 @@ def __(convert_to_coco_format):
                 temp_pred_bboxs.append(temp_pred_bbox)
                 count_id +=1
             _preds['preds'] = temp_pred_bboxs
+        return _predictions
+
+    temp_predictions = fix_preds(predictions)
+    temp_predictions
+    return fix_preds, temp_predictions
 
 
-    return (fix_preds,)
+@app.cell
+def __(temp_predictions):
+    temp_predictions
+    return
 
 
 @app.cell(hide_code=True)
-def __(pd, predictions):
+def __(pd, temp_predictions):
     _bbox_areas = []
 
     category_mapping = {
@@ -843,14 +850,14 @@ def __(pd, predictions):
         1: "calf"
     }
 
-    for _item in predictions:
+    for _item in temp_predictions:
         for _pred in _item.get("preds", []):
             _bbox = _pred.get("bbox")
             if _bbox:
                 _area = _bbox[2] * _bbox[3]  # Width * Height
                 _category = category_mapping.get(_pred.get("pred_category_id", -1), "unknown")
                 _bbox_areas.append({"type": "prediction", "class": _category, "area": _area})
-        
+
         for _annotation in _item.get("annotations", []):
             _bbox = _annotation.get("bbox")
             if _bbox:
@@ -896,7 +903,6 @@ def __(alt, bbox_areas_df):
 
 @app.cell(hide_code=True)
 def __(alt, bbox_areas_df):
-
     _kde_chart = alt.Chart(bbox_areas_df).transform_density(
         'area',
         groupby=['type', 'class'],  # Group by both type and class (calf/adult)
