@@ -1,16 +1,18 @@
 import marimo
 
 __generated_with = "0.9.4"
-app = marimo.App(
-    width="medium",
-    app_title="Model evaluation",
-    layout_file="layouts/recall-precision.slides.json",
-)
+app = marimo.App(width="medium", app_title="Model evaluation")
 
 
 @app.cell(hide_code=True)
 def __(mo):
     mo.md(r"""# Answer questions from Torkild and Vebjørn 🕺🕺""")
+    return
+
+
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md(r"""# Set up""")
     return
 
 
@@ -296,7 +298,7 @@ def __(
     y_true = []  # Ground truth class (calf or adult)
     y_pred = []  # Predicted class (calf or adult)
     false_positive_count = 0  # To count false positives
-    iou_threshold = 0.2  # Threshold for a valid detection
+    iou_threshold = 0.4  # Threshold for a valid detection
     false_positive_images = {}  # To store false positives per image
     false_negative_images = {}
 
@@ -452,7 +454,11 @@ def __(mo):
         """
         # Just a quick overview
 
-        There are many images where the **count** of annotated vs. predicted images are correct. Being to the left means there are more predicted bounding boxes and being to the right means there are more annotated.
+        * Metrics - precision and recall
+        * Confusion matrix
+        * Look at predictions with false positives
+        * Look at predictions with false negatives, which reindeer is the model missing?
+        * Look at general bounding box sizes. Is there anything which can be said from these?
         """
     )
     return
@@ -502,9 +508,12 @@ def __(mo):
         ## Q1
         _A measure of agreement between model and observer detection and classification. In other words, what is the average probability (including CI, SE or similar) that the model will detect a reindeer (of any category) given that an observer has detected the reindeer?_
 
-        The measure of agreement between the model and observer detection can be expressed as the **recall**, which represents the probability that the model will detect a reindeer given that the observer has detected it. Recall answers the question: "Out of all the actual positive instances, how many did the model correctly identify?"
+        The measure of agreement between the model and observer detection can be expressed as the **recall**, which represents the probability that the model will detect a reindeer given that the observer has detected it. It is based on TP and FN.
 
-        We will also loook into **precision** which is a metric which answers the question: "Out of all the instances the model predicted as positive, how many were actually positive?"
+        > Recall answers the question: "Out of all the actual positive instances, how many did the model correctly identify?"
+
+        We will also loook into **precision** which is also a metric based on TP and FP.
+        > Precision answers the question: "Out of all the instances the model predicted as positive, how many were actually positive?"
         """
     )
     return
@@ -639,7 +648,7 @@ def __(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(false_negative_images, false_positive_images, pd):
     false_positive_df = pd.DataFrame(list(false_positive_images.items()), columns=['Image', 'False Positives'])
     false_negative_df = pd.DataFrame(list(false_negative_images.items()), columns=['Image', 'False Negatives'])
@@ -723,7 +732,10 @@ def __(Image, false_positive_df, math, mo, patches, plt, predictions):
             # Add bounding boxes for annotations
             for ann_bbox in _pred['annotations']:
                 x, y, width, height = ann_bbox['bbox']
-                rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor='r', facecolor='none')
+                if ann_bbox['category_id'] == 0:
+                    rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor='r', facecolor='none')
+                else:
+                    rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor='g', facecolor='none')
                 ax.add_patch(rect)
 
             # Add bounding boxes for predictions
@@ -743,7 +755,6 @@ def __(Image, false_positive_df, math, mo, patches, plt, predictions):
             axes[j].axis('off')
 
         plt.tight_layout()
-        plt.savefig("./")
         plt.show()
 
     # Call the function to plot all images in a grid with 2 columns
@@ -767,11 +778,21 @@ def __(Image, false_positive_df, math, mo, patches, plt, predictions):
 
 
 @app.cell(hide_code=True)
-def __(data_path, false_negative_df, mo, plot_images_in_grid, predictions):
-    top_false_negatives = false_negative_df.sort_values(by='False Negatives', ascending=False).head(4)
+def __(false_negative_df):
+    _top_false_negatives = false_negative_df.sort_values(by='False Negatives', ascending=False).head(4)
+    top_false_negatives_list = _top_false_negatives['Image'].values.tolist()
+    _top_false_negatives
+    return (top_false_negatives_list,)
 
-    top_false_negatives_list = top_false_negatives['Image'].values.tolist()
 
+@app.cell(hide_code=True)
+def __(
+    data_path,
+    mo,
+    plot_images_in_grid,
+    predictions,
+    top_false_negatives_list,
+):
     _plot_preds = []
     for _img_id in top_false_negatives_list:
         for _pred in predictions:
@@ -779,7 +800,7 @@ def __(data_path, false_negative_df, mo, plot_images_in_grid, predictions):
                 _new_pred = _pred
                 _new_pred['data_path'] = data_path + _img_id
                 _plot_preds.append(_new_pred)
-
+    print(_plot_preds)
     # Call the function to plot all images in a grid with 2 columns
     plot_images_in_grid(_plot_preds)
     mo.md("""
@@ -787,12 +808,12 @@ def __(data_path, false_negative_df, mo, plot_images_in_grid, predictions):
 
     Here we look at which annotations the model has missed, and has not been predicted. _Talk about each image_. In general one can see that the reindeers which are very small has been missed. This again might be due to the variation in height.
     """)
-    return top_false_negatives, top_false_negatives_list
+    return
 
 
 @app.cell(hide_code=True)
 def __(mo):
-    mo.md(r"""### In general the model seems to be struggling with the variation in sizes of the reindeers, which is caused by the varying elevation of the drone.""")
+    mo.md(r"""### In general the model seems to be struggling with the variation in sizes of the reindeers, which is caused by the varying elevation of the drone. Also""")
     return
 
 
@@ -810,39 +831,7 @@ def __(mo):
 
 
 @app.cell(hide_code=True)
-def __(convert_to_coco_format, predictions):
-    def fix_preds(_predictions):
-        count_id = 0
-        for _preds in _predictions:
-            _img_id = _preds['image_id']
-            temp_pred_bbox = {}
-            temp_pred_bboxs = []
-            for _bbox in _preds['preds']:
-                temp_pred_bbox['id'] = count_id
-                _x, _y, _width, _height = convert_to_coco_format(_bbox[0])
-                temp_pred_bbox['bbox'] = [_x, _y, _width, _height]
-                temp_pred_bbox['area'] = _width * _height
-                temp_pred_bbox['pred_category_id'] = _bbox[2]
-                temp_pred_bbox['pred_prob'] = _bbox[1]
-                temp_pred_bbox['image_id'] = _img_id
-                temp_pred_bboxs.append(temp_pred_bbox)
-                count_id +=1
-            _preds['preds'] = temp_pred_bboxs
-        return _predictions
-
-    temp_predictions = fix_preds(predictions)
-    temp_predictions
-    return fix_preds, temp_predictions
-
-
-@app.cell
-def __(temp_predictions):
-    temp_predictions
-    return
-
-
-@app.cell(hide_code=True)
-def __(pd, temp_predictions):
+def __(pd, predictions):
     _bbox_areas = []
 
     category_mapping = {
@@ -850,86 +839,50 @@ def __(pd, temp_predictions):
         1: "calf"
     }
 
-    for _item in temp_predictions:
-        for _pred in _item.get("preds", []):
-            _bbox = _pred.get("bbox")
-            if _bbox:
-                _area = _bbox[2] * _bbox[3]  # Width * Height
-                _category = category_mapping.get(_pred.get("pred_category_id", -1), "unknown")
-                _bbox_areas.append({"type": "prediction", "class": _category, "area": _area})
+    _pred_id = 0
+    for _pred in predictions:
+        _img_id = _pred["image_id"]
+        for _gt_box in _pred["annotations"]:
+            _gt_rec = {
+                "id": _img_id,
+                "bbox_id": _gt_box["id"],
+                "annotated": True,
+                "area": _gt_box["area"],
+                "class": category_mapping[_gt_box["category_id"]],
+            }
+            _bbox_areas.append(_gt_rec)
+        for _pred_box in _pred["preds"]:
+            _pred_bbox = _pred_box[0]
+            _width = _pred_bbox[2] - _pred_bbox[0]
+            _height = _pred_bbox[3] - _pred_bbox[1]
+            _area = _width*_height
+            _pred_rec = {
+                "id": _img_id,
+                "bbox_id": _pred_id,
+                "annotated": False,
+                "area": _area,
+                "class": category_mapping[_pred_box[2]]
+            }
+            _pred_id += 1
+            _bbox_areas.append(_pred_rec)
 
-        for _annotation in _item.get("annotations", []):
-            _bbox = _annotation.get("bbox")
-            if _bbox:
-                _area = _bbox[2] * _bbox[3]  # Width * Height
-                _category = category_mapping.get(_annotation.get("category_id", -1), "unknown")
-                _bbox_areas.append({"type": "annotation", "class": _category, "area": _area})
-
-    # Convert the extracted data into a DataFrame
-    bbox_areas_df = pd.DataFrame(_bbox_areas)
-    bbox_areas_df.groupby(['type', 'class'])['area'].describe()
-    return bbox_areas_df, category_mapping
-
-
-@app.cell(hide_code=True)
-def __(alt, bbox_areas_df):
-    _kde_chart = alt.Chart(bbox_areas_df).transform_density(
-        'area',
-        groupby=['type'],
-        as_=['area', 'density']
-    ).mark_area(opacity=0.5).encode(
-        x='area:Q',
-        y='density:Q',
-        color='type:N'
-    ).properties(
-        title="KDE of Bounding Box Sizes for Predictions and Annotations",
-        width=800
-    )
-
-    # Create histogram plot
-    _histogram_chart = alt.Chart(bbox_areas_df).mark_bar(opacity=0.5).encode(
-        alt.X('area:Q', bin=alt.Bin(maxbins=40), title='Bounding Box Area'),
-        alt.Y('count()', title='Count'),
-        alt.Color('type:N', title='Type')
-    ).properties(
-        title="Histogram of Bounding Box Sizes for Predictions and Annotations",
-        width=800
-    )
-
-    # Show both charts
-    _kde_chart & _histogram_chart
-    return
+    bbox_df = pd.DataFrame(_bbox_areas)
+    print("bbox_df was created")
+    return bbox_df, category_mapping
 
 
 @app.cell(hide_code=True)
-def __(alt, bbox_areas_df):
-    _kde_chart = alt.Chart(bbox_areas_df).transform_density(
-        'area',
-        groupby=['type', 'class'],  # Group by both type and class (calf/adult)
-        as_=['area', 'density']
-    ).mark_area(opacity=0.5).encode(
-        x='area:Q',
-        y='density:Q',
-        color=alt.Color('class:N', title='Class (Calf/Adult)'),  # Color by class
-        row='type:N'  # Separate rows for predictions and annotations
-    ).properties(
-        title="KDE of Bounding Box Sizes by Class (Calf/Adult) for Predictions and Annotations",
-        width=800,
-    )
-
-    # Create histogram plot with legend for each class and type (annotations vs. predictions)
-    _histogram_chart = alt.Chart(bbox_areas_df).mark_bar(opacity=0.5).encode(
-        alt.X('area:Q', bin=alt.Bin(maxbins=30), title='Bounding Box Area'),
+def __(alt, bbox_df):
+    _chart = alt.Chart(bbox_df).mark_bar().encode(
+        alt.X('area:Q', bin=alt.Bin(maxbins=20), title='Bounding Box Area'),
         alt.Y('count()', title='Count'),
-        alt.Color('class:N', title='Class (Calf/Adult)'),  # Color by class
-        row='type:N'  # Separate rows for predictions and annotations
+        color='annotated:N',
+        tooltip=['area', 'annotated']
     ).properties(
-        title="Histogram of Bounding Box Sizes by Class (Calf/Adult) for Predictions and Annotations",
-        width=800,
+        title='Bounding Box Sizes with Respect to Annotated or Predicted',
+        width=800
     )
-
-    # Show both charts with the legend
-    _kde_chart & _histogram_chart
+    _chart
     return
 
 
@@ -941,7 +894,7 @@ def __(mo):
 
         _I have asked for some pictures taken from helicopters during the regular calf surveys. It would be interesting to run these pictures through the mature model to see how well it manages to detect individuals and distinguish calves from other individuals._
 
-        This did not do well, sadly. Referring to the application. This is because the different perspective, and the reindeer having different shapes than what it has been trained on.
+        They worked suprisingly well at detecting reindeer in general, but not when it came to distinguishing the calfs and the reindeer.
         """
     )
     return
@@ -958,6 +911,7 @@ def __(mo):
         * IR drone photos will make this task a lot easier -- the color variation of each calf has made it difficult, and also the varying size of all the reindeers caused by the varying elevetion.
         * Do we want more seasons?
         * Do we want more training data?
+        * Look closer at rotated bounding boxes
 
 
         ## Bottleneck
