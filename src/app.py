@@ -63,14 +63,13 @@ def predict_and_visualize(image, predictor, cfg):
     Returns:
         numpy.ndarray: The output image in RGB format with bounding boxes and instance predictions drawn.
     """
-    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    outputs = predictor(image_bgr)
+    outputs = predictor(image)
 
     # opencv uses BGR by default, but the visualizer expects RGB, so we reverse the channels
-    v = Visualizer(image_bgr[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TEST[0]), scale=1.2)
+    v = Visualizer(image, MetadataCatalog.get(cfg.DATASETS.TEST[0]), scale=1.2)
     v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
-    output_image = v.get_image()[:, :, ::-1] 
+    output_image = v.get_image()
 
     return output_image
 
@@ -99,7 +98,7 @@ def main():
     # define example images
     example_images_drone_dir = Path(__file__).resolve().parent.parent / "assets" / "gradio_example_images" / "drone_images"
     example_images_heli_dir = Path(__file__).resolve().parent.parent / "assets" / "gradio_example_images" / "helicopter_images"
-    example_images = list(example_images_drone_dir.glob("*.png")) + list(example_images_heli_dir.glob("*.JPG")) 
+    example_images = list(example_images_drone_dir.glob("*.png")) + list(example_images_heli_dir.glob("*.png")) 
     
     # create gradio interface
     gr_interface = gr.Interface(
