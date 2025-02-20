@@ -46,7 +46,6 @@ def load_model():
     cfg.MODEL.WEIGHTS = model_weights
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    
     cfg.DATASETS.TEST = (dataset_name,)
 
     predictor = DefaultPredictor(cfg)
@@ -63,14 +62,13 @@ def predict_and_visualize(image, predictor, cfg):
     Returns:
         numpy.ndarray: The output image in RGB format with bounding boxes and instance predictions drawn.
     """
-    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    outputs = predictor(image_bgr)
+    outputs = predictor(image)
 
     # opencv uses BGR by default, but the visualizer expects RGB, so we reverse the channels
-    v = Visualizer(image_bgr[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TEST[0]), scale=1.2)
+    v = Visualizer(image, MetadataCatalog.get(cfg.DATASETS.TEST[0]), scale=1.2)
     v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
-    output_image = v.get_image()[:, :, ::-1] 
+    output_image = v.get_image()
 
     return output_image
 
