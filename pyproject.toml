@@ -24,11 +24,16 @@ optuna = "^4.0.0"
 
 # Prebulit wheel https://github.com/facebookresearch/detectron2/discussions/5200
 detectron2 = {version = "0.6+2a420edpt2.3.1cu121", source = "torch_packages_builder"}
+seaborn = "^0.13.2"
 
 [[tool.poetry.source]]
 name = "torch_packages_builder"
 url = "https://miropsota.github.io/torch_packages_builder"
 priority = "supplemental"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
 
 [build-system]
 requires = ["poetry-core"]
