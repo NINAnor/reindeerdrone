@@ -143,12 +143,13 @@ def __(mo):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def __(annotation_file, image_folder, json, os):
     with open(annotation_file) as anno_file:
         annotations = json.load(anno_file)
 
     image_filenames = [f for f in os.listdir(image_folder) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
+
     return anno_file, annotations, image_filenames
 
 
@@ -273,7 +274,13 @@ def __(cv2):
 
 @app.cell(hide_code=True)
 def __(mo):
-    mo.md(r"""# Predicting 🤖""")
+    mo.md(
+        r"""
+        # Predicting 🤖
+
+        Looking back at this part i wish i rather just read the file?? why didn't i just read the file urgh
+        """
+    )
     return
 
 
@@ -302,39 +309,7 @@ def __(
     false_positive_images = {}  # To store false positives per image
     false_negative_images = {}
 
-    # images which are outliers (produces)
-    bad_images = (
-        "DSC09929_tile44.png",
-        "DSC01033_tile33.png",
-        "DSC01033_tile6.png",
-        "DSC01033_tile55.png",
-        "DSC09874_tile42.png",
-        "DSC09929_tile26.png",
-        "DSC01033_tile67.png",
-        "DSC01033_tile75.png",
-        #"DSC01026_tile35.png",
-        #"DSC09929_tile39.png",
-        #"DSC09874_tile35.png",
-        # false negatives
-        "DSC09929_tile32.png",
-        "DSC00949_tile15.png",
-        "DSC09874_tile2.png",
-        "DSC09929_tile45.png",
-        "DSC09929_tile25.png",
-        "DSC09874_tile1.png",
-        #"DSC09874_tile28.png",
-        #"DSC00949_tile8.png",
-        #"DSC00949_tile9.png",
-        #"DSC09929_tile38.png",
-        #"DSC01026_tile21.png",
-        #"DSC09874_tile9.png"
-        )
-
-
     for img_filename in tqdm(image_filenames, desc="Processing Images"):
-        if img_filename in bad_images:
-            print(f"skipping {img_filename}")
-            continue
         img_path = os.path.join(image_folder, img_filename)
         img = cv2.imread(img_path)
 
@@ -408,7 +383,6 @@ def __(
     return (
         ann_adult_count,
         ann_calf_count,
-        bad_images,
         best_gt,
         best_iou,
         compare_dict,
