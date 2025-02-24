@@ -7,3 +7,4 @@ tiles/
 .vscode/
 notebooks/detr_finetuned_reindeerdrone
 config.yaml
+outputs/
