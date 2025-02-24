@@ -24,8 +24,8 @@ def load_model():
     """
     dataset_name = "reindeer_test"
     
-    current_dir = Path(__file__).resolve().parent
-    config_path = current_dir.parent.parent / "config.yaml"
+    current_dir = Path(__file__).resolve()
+    config_path = current_dir / "configs" / "config.yaml"
 
     
     with open(config_path) as f:

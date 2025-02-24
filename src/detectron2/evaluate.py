@@ -18,6 +18,7 @@ from detectron2.utils.logger import setup_logger
 
 from dataset_utils import get_reindeer_dicts, create_test_dataset
 from detectron2.engine import DefaultTrainer
+from pathlib import Path
 
 import json
 
@@ -74,8 +75,8 @@ def setup(args, output_dir):
 def evaluate(args):
     setup_logger()
         
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(current_dir, './../../config.yaml')
+    current_dir = Path(__file__).resolve()
+    config_path = current_dir / "configs" / "config.yaml"
     
     with open(config_path) as f:
         cfgP = yaml.load(f, Loader=FullLoader)

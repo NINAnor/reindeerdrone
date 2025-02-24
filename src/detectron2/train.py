@@ -20,6 +20,7 @@ from detectron2.utils.logger import setup_logger
 
 from dataset_utils import split_dataset, get_reindeer_dicts, build_augmentation
 from hooks import LossEvalHook, EarlyStoppingHook
+from pathlib import Path
 
 
 class ReindeerTrainer(DefaultTrainer):
@@ -106,8 +107,8 @@ def objective(trial, output_dir):
     return validation_loss
 
 def main(args):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(current_dir, '../../config.yaml')
+    current_dir = Path(__file__).resolve()
+    config_path = current_dir / "configs" / "config.yaml"
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Configuration file not found at {config_path}")
 

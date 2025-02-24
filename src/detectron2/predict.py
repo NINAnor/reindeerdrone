@@ -17,6 +17,7 @@ import matplotlib.patches as patches
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from pathlib import Path
 
 def visualize_preds_with_gt(image, preds, annotations, output_path, class_names=["Adult", "Calf"]):
     # convert BGR to RGB if necessary
@@ -230,8 +231,8 @@ def process_folder(cfg):
     print("All images processed")
 
 if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(current_dir, './../../config.yaml')
+    current_dir = Path(__file__).resolve()
+    config_path = current_dir / "configs" / "config.yaml"
     
     with open(config_path) as f:
         cfg = yaml.load(f, Loader=FullLoader)
