@@ -113,7 +113,7 @@ Below is a detailed description of all the configuration values in the provided 
 ## Create the training dataset dataset
 
 ```bash
-poetry run src/dataset.py
+poetry run src/detectron2/dataset.py
 ```
 
 Because the satellite images are too big to be processed efficiently by `detectron2` we split the images into `tiles`. **Tile size** can be changed in the `config.yaml` file and can slighlty change the results (we recommand to do a `hyperparameter search` to search for the optimal tile size).
@@ -123,7 +123,7 @@ The script will create a `tiles` folder containing the tiles of the processed sa
 ## Train detectron2
 
 ```bash
-poetry run src/train.py
+poetry run src/detectron2/train.py
 ```
 
 With this script we train a `Detectron2` model with a [faster-rcnn architecture](https://github.com/facebookresearch/detectron2/blob/main/configs/COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml) as backbone. Note that it is possible to change the backbone by choosing another [Detectron compliant](https://github.com/facebookresearch/detectron2/tree/main/configs/COCO-Detection) model.
@@ -133,7 +133,7 @@ The script should create a folder `output` that contains `model_final.pth`, the 
 ## Evaluate the trained model
 
 ```bash
-poetry run src/evaluate.py
+poetry run src/detectron2/evaluate.py
 ```
 
 This script will use the trained model and run evaluation on the model by using the test set. The test set should be tiled as well using the ``dataset.py`` script mentioned earlier.
@@ -142,7 +142,7 @@ It is possible to set `STORE_EVALUATION_RESULTS` which will store a JSON-file wi
 ## Predict with the trained model
 
 ```bash
-poetry run src/predict.py
+poetry run src/detectron2/predict.py
 ```
 
 The script will load the model that has been trained. The script will create a folder inside the `OUTPUT_FOLDER` defined in `config.yaml`: `/predict/image` containing the predicted bounding boxes and `./predict/json` containing the a `.json` file per image documenting all the bounding box coordinates.
@@ -154,7 +154,7 @@ An example of the visualizations can be seen in the picture underneath. The dash
 ![Model prediction for a satellite picture](./assets/readme/DSC09929_tile26_pred.png)
 
 ```bash
-poetry run src/app.py
+poetry run src/detectron2/app.py
 ```
 
 This script will run a Gradio application based on the model weights in the config and some example images which is in the `assets/gradio_example_images`. It is also possible to upload your own photos.
