@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 import os
-import yaml
+from pathlib import Path
 
+import yaml
+from dataset_utils import create_test_dataset, get_reindeer_dicts
 from yaml import FullLoader
+
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.data import (
@@ -12,15 +16,10 @@ from detectron2.data import (
     MetadataCatalog,
     build_detection_test_loader,
 )
-from detectron2.engine import DefaultTrainer, launch, default_argument_parser
+from detectron2.engine import DefaultTrainer, default_argument_parser, launch
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 
-from dataset_utils import get_reindeer_dicts, create_test_dataset
-from detectron2.engine import DefaultTrainer
-from pathlib import Path
-
-import json
 
 def save_evaluation_results(cfgP, evaluation_results):
     model_weights_path = os.path.basename(cfgP["MODEL_WEIGHTS"])

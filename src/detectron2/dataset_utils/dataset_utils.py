@@ -1,6 +1,9 @@
 import os
+
 import cv2
+
 from detectron2.structures import BoxMode
+
 
 def get_reindeer_dicts(tile_dir, annotations):
     dataset_dicts = []
@@ -15,7 +18,7 @@ def get_reindeer_dicts(tile_dir, annotations):
         record["width"] = width
 
         objs = []
-        for bbox in anno['annotations']:
+        for bbox in anno["annotations"]:
             obj = {
                 "bbox": bbox["bbox"],
                 "bbox_mode": BoxMode.XYWH_ABS,
