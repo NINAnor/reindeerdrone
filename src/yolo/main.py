@@ -27,10 +27,14 @@ def main(cfg):
     model.train(
         project="training_logs",
         data=data_yaml,
-        epochs=cfg.train.EPOCHS,
+        epochs=100,
         imgsz=cfg.train.IMG_SIZE,
         workers=cfg.train.NUM_WORKERS,
         batch=cfg.train.BATCH_SIZE,
+        augment=cfg.train.AUGMENT,
+        lr0=cfg.train.INIT_LR,
+        plots=True,
+        patience=cfg.train.PATIENCE,
     )
 
 
