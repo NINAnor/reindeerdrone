@@ -1,6 +1,6 @@
 # Reindeer detection on satellite imagery
 
-This repository contained code for training and using a model for detecting reindeer on satellite images. The repository is currently a **WORK IN PROGRESS**.
+This repository contained code for training and using a model for detecting reindeer on satellite images.
 
 ## Installation
 
