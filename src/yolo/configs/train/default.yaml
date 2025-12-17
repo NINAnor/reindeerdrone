@@ -1,0 +1,7 @@
+NUM_WORKERS: 8
+IMG_SIZE: 1024
+BATCH_SIZE: -1 # adjust batch size 60% GPU utlization
+EPOCHS: 1000
+AUGMENT: True
+INIT_LR: 0.001
+PATIENCE: 20
